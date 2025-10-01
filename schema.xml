@@ -1,0 +1,64 @@
+<ArchitectureSpec version="1.0">
+  <Context>
+    <AppName></AppName>
+    <BusinessCapabilities></BusinessCapabilities> <!-- comma-separated -->
+    <Criticality></Criticality> <!-- low|medium|high -->
+  </Context>
+
+  <Decisions>
+    <DomainStyle></DomainStyle> <!-- e.g., modular monolith, microservices, SOA -->
+    <IntegrationStyle></IntegrationStyle> <!-- event-driven, REST, gRPC, batch -->
+    <Runtime></Runtime> <!-- python, node, java, mixed -->
+    <DataTier></DataTier> <!-- postgres, aurora, dynamodb, etc. -->
+    <InfraBaseline></InfraBaseline> <!-- serverless, k8s, vms -->
+  </Decisions>
+
+  <Patterns>
+    <Pattern name="" rationale="" />
+    <Pattern name="" rationale="" />
+  </Patterns>
+
+  <NonFunctionals>
+    <Availability target=""/>  <!-- e.g., 99.9% -->
+    <Latency p95_ms=""/>
+    <Throughput rps=""/>
+    <Security notes=""/>
+    <Compliance notes=""/>
+    <Observability notes=""/>
+    <CostGuardrails notes=""/>
+  </NonFunctionals>
+
+  <Services>
+    <!-- repeat per domain/service -->
+    <Service name="" domain="">
+      <APIs>
+        <API name="" protocol="" auth="" sync_or_async=""/>
+      </APIs>
+      <DataStores>
+        <Store type="" purpose="" />
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="" name="" purpose=""/> <!-- queue|topic|bus -->
+      </QueuesTopics>
+    </Service>
+  </Services>
+
+  <Constraints>
+    <Must></Must>
+    <Should></Should>
+    <MustNot></MustNot>
+  </Constraints>
+
+  <CloudMapping provider="">
+    <!-- concrete components, stays high-level for infra agent -->
+    <Compute></Compute>
+    <Networking></Networking>
+    <Data></Data>
+    <Messaging></Messaging>
+    <Identity></Identity>
+  </CloudMapping>
+
+  <Risks>
+    <Risk item="" mitigation=""/>
+  </Risks>
+</ArchitectureSpec>

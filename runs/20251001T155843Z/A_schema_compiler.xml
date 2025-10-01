@@ -1,0 +1,107 @@
+```xml
+<ArchitectureSpec version="1.0">
+  <Context>
+    <AppName>OrderTrack</AppName>
+    <BusinessCapabilities>order capture, status updates, customer notifications, order history</BusinessCapabilities>
+    <Criticality>high</Criticality>
+  </Context>
+
+  <Decisions>
+    <DomainStyle>modular monolith</DomainStyle>
+    <IntegrationStyle>event-driven</IntegrationStyle>
+    <Runtime>python</Runtime>
+    <DataTier>dynamodb, aurora-serverless-v2, s3</DataTier>
+    <InfraBaseline>serverless</InfraBaseline>
+  </Decisions>
+
+  <Patterns>
+    <Pattern name="CQRS" rationale="Separate read-optimized DynamoDB for order status queries (P95 &lt;300ms) and Aurora for transactional writes and relational queries"/>
+    <Pattern name="Event Sourcing (partial)" rationale="Store order state transitions as immutable events in S3 for audit, replay, and compliance"/>
+    <Pattern name="API Gateway + Lambda" rationale="Serverless REST endpoints for order capture and status reads; auto-scales to 150 rps peak"/>
+    <Pattern name="Async Notification" rationale="EventBridge publishes order events; SQS queues decouple notification workers to handle email/SMS delivery"/>
+    <Pattern name="Strangler Fig" rationale="Migrate from monolith incrementally; API Gateway routes new endpoints to Lambda, legacy to monolith until retired"/>
+    <Pattern name="Circuit Breaker" rationale="Protect downstream notification services; fail gracefully if SES or SNS unavailable"/>
+  </Patterns>
+
+  <NonFunctionals>
+    <Availability target="99.9%"/>
+    <Latency p95_ms="300 read, 800 write"/>
+    <Throughput rps="150 peak, 30 avg"/>
+    <Security notes="PCI-DSS tokenization via third-party gateway; PII encrypted at rest (KMS) and in transit (TLS 1.3); IAM least-privilege roles per Lambda; Secrets Manager for DB credentials"/>
+    <Compliance notes="PCI-DSS Level 2 for payment tokens (no card storage); GDPR/CCPA for PII; audit logs retained 7 years in S3 Glacier"/>
+    <Observability notes="CloudWatch Logs with structured JSON; X-Ray tracing for distributed requests; OTEL SDK in Lambda; alarms on P95 latency, error rate &gt;1%, DLQ depth"/>
+    <CostGuardrails notes="Lambda provisioned concurrency only for critical read path; Aurora auto-pause after 5 min idle; DynamoDB on-demand pricing; S3 Intelligent-Tiering for event logs"/>
+  </NonFunctionals>
+
+  <Services>
+    <Service name="OrderIngestion" domain="order-management">
+      <APIs>
+        <API name="CreateOrder" protocol="REST" auth="IAM" sync_or_async="sync"/>
+        <API name="UpdateOrderStatus" protocol="REST" auth="IAM" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="aurora-serverless-v2" purpose="transactional order writes, relational integrity"/>
+        <Store type="dynamodb" purpose="order status read cache, single-table design"/>
+        <Store type="s3" purpose="event log archive, immutable order state transitions"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="topic" name="OrderEvents" purpose="publish order created, updated, completed events"/>
+      </QueuesTopics>
+    </Service>
+    <Service name="OrderQuery" domain="order-management">
+      <APIs>
+        <API name="GetOrderStatus" protocol="REST" auth="API-Key" sync_or_async="sync"/>
+        <API name="ListCustomerOrders" protocol="REST" auth="API-Key" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="dynamodb" purpose="optimized read queries, GSI on customer_id"/>
+      </DataStores>
+      <QueuesTopics/>
+    </Service>
+    <Service name="NotificationService" domain="customer-engagement">
+      <APIs/>
+      <DataStores>
+        <Store type="dynamodb" purpose="notification delivery status, idempotency tracking"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="queue" name="EmailQueue" purpose="async email dispatch via SES"/>
+        <Channel type="queue" name="SMSQueue" purpose="async SMS dispatch via SNS"/>
+        <Channel type="queue" name="NotificationDLQ" purpose="failed notification retry and alerting"/>
+      </QueuesTopics>
+    </Service>
+    <Service name="CustomerProfile" domain="customer-management">
+      <APIs>
+        <API name="GetCustomerProfile" protocol="REST" auth="IAM" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="aurora-serverless-v2" purpose="customer PII, contact preferences"/>
+      </DataStores>
+      <QueuesTopics/>
+    </Service>
+  </Services>
+
+  <Constraints>
+    <Must>Use AWS managed services only; encrypt PII at rest with KMS; tokenize payment data via PCI-compliant gateway; implement IAM least-privilege; retain audit logs 7 years; achieve 99.9% availability SLA</Must>
+    <Should>Migrate incrementally from monolith; use DynamoDB single-table design for cost efficiency; enable X-Ray tracing on all Lambda functions; set up CloudWatch alarms for SLA breaches; use Aurora Data API to avoid connection pooling overhead</Should>
+    <MustNot>Store raw payment card data; expose PII in logs or metrics; use long-lived credentials; deploy without automated rollback; exceed cost cap by provisioning unnecessary reserved capacity</MustNot>
+  </Constraints>
+
+  <CloudMapping provider="AWS">
+    <Compute>Lambda (Python 3.11 runtime) for API handlers and async workers; API Gateway REST API with usage plans and API keys for customer access; IAM authorizer for internal ops</Compute>
+    <Networking>API Gateway regional endpoint; VPC endpoints for Lambda to Aurora/Secrets Manager; CloudFront optional for global customer reads; WAF for rate limiting and SQL injection protection</Networking>
+    <Data>DynamoDB on-demand tables with GSI; Aurora Serverless v2 PostgreSQL (min 0.5 ACU); S3 buckets with Intelligent-Tiering and lifecycle policies to Glacier; KMS customer-managed keys for PII encryption</Data>
+    <Messaging>EventBridge default bus for order events; SQS standard queues for email/SMS with DLQ; SNS for SMS delivery; SES for transactional email</Messaging>
+    <Identity>IAM roles per Lambda function; Secrets Manager for Aurora credentials with auto-rotation; Cognito optional for future customer self-service portal</Identity>
+  </CloudMapping>
+
+  <Risks>
+    <Risk item="DynamoDB eventual consistency may show stale order status to customers within 1s of update" mitigation="Use strongly consistent reads for GetOrderStatus API; document 1s lag in SLA"/>
+    <Risk item="Aurora cold start after auto-pause can add 10-30s latency to first write" mitigation="Set min capacity 0.5 ACU to reduce pause frequency; monitor cold start metrics; consider keeping warm during business hours"/>
+    <Risk item="Lambda concurrent execution limits (1000 default) may throttle at peak 150 rps if each request takes &gt;6s" mitigation="Request limit increase to 2000; optimize Lambda execution time; implement exponential backoff in clients"/>
+    <Risk item="PCI-DSS scope unclear if payment tokens transit through Lambda/API Gateway" mitigation="Use redirect flow to PCI-compliant payment gateway; store only tokenized references; engage QSA for attestation"/>
+    <Risk item="EventBridge at-least-once delivery may cause duplicate notifications" mitigation="Implement idempotency keys in NotificationService DynamoDB table; deduplicate within 24h window"/>
+    <Risk item="Migration from MySQL to Aurora/DynamoDB requires schema redesign and data backfill" mitigation="Use AWS DMS for initial bulk load; run dual-write during transition; validate data integrity before cutover"/>
+    <Risk item="Cost overrun if DynamoDB or Lambda usage exceeds forecast" mitigation="Set CloudWatch billing alarms at 80% of monthly budget; use DynamoDB on-demand to avoid over-provisioning; review cost weekly during MVP"/>
+  </Risks>
+</ArchitectureSpec>
+```

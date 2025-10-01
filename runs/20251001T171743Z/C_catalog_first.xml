@@ -1,0 +1,232 @@
+```xml
+<ArchitectureSpec>
+  <Metadata>
+    <AppName>OrderTrack</AppName>
+    <Version>1.0</Version>
+    <Cloud>AWS</Cloud>
+    <Runtime>Python 3.11</Runtime>
+  </Metadata>
+
+  <DomainStyle>modular-monolith</DomainStyle>
+  <Rationale>
+    Traffic (150 rps peak) and team size favor single deployable with clear module boundaries.
+    Simpler than microservices for MVP; modules: orders, notifications, customer-profiles.
+  </Rationale>
+
+  <IntegrationStyle primary="event-driven" secondary="REST">
+    <Internal>event-driven</Internal>
+    <External>REST</External>
+    <Details>
+      EventBridge for async order status changes triggering notifications.
+      API Gateway REST for synchronous order capture and status queries.
+    </Details>
+  </IntegrationStyle>
+
+  <InfraBaseline>serverless</InfraBaseline>
+  <Components>
+    <Compute>
+      <Service>Lambda</Service>
+      <Functions>
+        <Function name="OrderAPI" trigger="API Gateway" timeout="15s"/>
+        <Function name="StatusUpdateHandler" trigger="EventBridge" timeout="30s"/>
+        <Function name="NotificationWorker" trigger="SQS" timeout="60s"/>
+      </Functions>
+    </Compute>
+    <API>
+      <Service>API Gateway</Service>
+      <Type>REST</Type>
+      <Endpoints>
+        <Endpoint path="/orders" methods="POST,GET"/>
+        <Endpoint path="/orders/{id}" methods="GET,PATCH"/>
+        <Endpoint path="/orders/{id}/status" methods="GET"/>
+      </Endpoints>
+    </API>
+    <Messaging>
+      <EventBus>EventBridge</EventBus>
+      <Queues>
+        <Queue name="NotificationQueue" service="SQS" dlq="true"/>
+      </Queues>
+    </Messaging>
+  </Components>
+
+  <DataTier>
+    <Primary>dynamodb</Primary>
+    <Secondary>aurora</Secondary>
+    <Layout>
+      <Store name="OrdersTable" type="dynamodb">
+        <Purpose>High-write order capture, status updates, customer read queries</Purpose>
+        <PartitionKey>OrderID</PartitionKey>
+        <GSI name="CustomerIndex" pk="CustomerID" sk="CreatedAt"/>
+        <GSI name="StatusIndex" pk="Status" sk="UpdatedAt"/>
+        <Encryption>KMS</Encryption>
+      </Store>
+      <Store name="CustomerProfilesDB" type="aurora">
+        <Purpose>Relational customer data, PII, payment token references</Purpose>
+        <Engine>Aurora Serverless v2 PostgreSQL</Engine>
+        <Encryption>KMS</Encryption>
+        <Compliance>PCI-DSS token storage, PII encryption at rest</Compliance>
+      </Store>
+      <Store name="EventArchive" type="s3">
+        <Purpose>Immutable event log, audit trail, compliance</Purpose>
+        <Lifecycle>Glacier after 90 days</Lifecycle>
+      </Store>
+    </Layout>
+  </DataTier>
+
+  <Patterns>
+    <Pattern name="outbox">
+      <Application>DynamoDB Streams to EventBridge for reliable event publishing</Application>
+      <Reason>Ensure order state changes atomically trigger notifications without dual-write</Reason>
+    </Pattern>
+    <Pattern name="api-gateway">
+      <Application>API Gateway with Lambda authorizer for customer vs ops access</Application>
+      <Reason>Centralized auth, throttling (150 rps burst), request validation</Reason>
+    </Pattern>
+    <Pattern name="circuit-breaker">
+      <Application>Lambda retry with exponential backoff; SQS DLQ for notification failures</Application>
+      <Reason>Graceful degradation if downstream email/SMS services fail</Reason>
+    </Pattern>
+    <Pattern name="cache-aside">
+      <Application>DAX (DynamoDB Accelerator) for hot customer order queries</Application>
+      <Reason>P95 &lt; 300ms read latency; reduce DynamoDB read costs</Reason>
+    </Pattern>
+  </Patterns>
+
+  <Security>
+    <Authentication>
+      <Mechanism>API Gateway Lambda Authorizer with JWT</Mechanism>
+      <Roles>
+        <Role name="OpsUser" permissions="read,write,update"/>
+        <Role name="Customer" permissions="read-own"/>
+      </Roles>
+    </Authentication>
+    <Secrets>
+      <Service>Secrets Manager</Service>
+      <Items>Aurora credentials, third-party API keys (email/SMS providers)</Items>
+    </Secrets>
+    <Encryption>
+      <AtRest>KMS (DynamoDB, Aurora, S3)</AtRest>
+      <InTransit>TLS 1.2+</InTransit>
+    </Encryption>
+    <Compliance>
+      <Standard>PCI-DSS</Standard>
+      <Controls>Tokenized payment data in Aurora; no raw card data in logs; audit trail in S3</Controls>
+    </Compliance>
+    <Network>
+      <VPC>Aurora in private subnets; Lambda VPC attachment for DB access</VPC>
+      <SecurityGroups>Least privilege; Lambda SG to Aurora SG only</SecurityGroups>
+    </Network>
+  </Security>
+
+  <Observability>
+    <Logs>
+      <Service>CloudWatch Logs</Service>
+      <Format>structured-logs (JSON with trace context)</Format>
+      <Retention>30 days hot, archive to S3</Retention>
+    </Logs>
+    <Metrics>
+      <Service>CloudWatch Metrics</Service>
+      <Custom>Order capture rate, status update latency, notification success rate</Custom>
+    </Metrics>
+    <Traces>
+      <Service>AWS X-Ray</Service>
+      <Instrumentation>OTEL SDK in Lambda functions</Instrumentation>
+      <SamplingRate>100% errors, 10% success (cost control)</SamplingRate>
+    </Traces>
+    <AuditLogs>
+      <Destination>S3 EventArchive bucket</Destination>
+      <Events>Order creation, status changes, access by ops users</Events>
+      <Compliance>PCI-DSS audit requirements</Compliance>
+    </AuditLogs>
+    <Dashboards>
+      <Dashboard name="Operations">
+        <Widgets>API latency P95/P99, Lambda errors, DynamoDB throttles, SQS queue depth</Widgets>
+      </Dashboard>
+    </Dashboards>
+    <Alarms>
+      <Alarm metric="API 5xx rate" threshold="&gt;1%" action="SNS"/>
+      <Alarm metric="NotificationQueue DLQ depth" threshold="&gt;10" action="SNS"/>
+      <Alarm metric="Lambda concurrent executions" threshold="&gt;80% account limit" action="SNS"/>
+    </Alarms>
+  </Observability>
+
+  <NFRs>
+    <Availability target="99.9%">
+      <Strategy>Multi-AZ DynamoDB and Aurora; Lambda automatic retries; SQS DLQ</Strategy>
+      <Monitoring>CloudWatch Synthetics canary every 5 min</Monitoring>
+    </Availability>
+    <Performance>
+      <Read target="P95 &lt; 300ms">
+        <Strategy>DAX caching, DynamoDB single-digit ms, API Gateway regional endpoint</Strategy>
+      </Read>
+      <Write target="P95 &lt; 800ms">
+        <Strategy>DynamoDB on-demand capacity, async notification via EventBridge</Strategy>
+      </Write>
+    </Performance>
+    <Scalability>
+      <Peak>150 rps</Peak>
+      <Strategy>Lambda auto-scaling, DynamoDB on-demand, API Gateway burst limits</Strategy>
+    </Scalability>
+    <Cost>
+      <Target>Minimize idle costs</Target>
+      <Strategy>Serverless pay-per-use; Aurora Serverless v2 scales to 0.5 ACU; S3 Intelligent-Tiering</Strategy>
+    </Cost>
+  </NFRs>
+
+  <Risks>
+    <Risk id="R1" severity="medium">
+      <Description>DynamoDB hot partition if single customer generates high order volume</Description>
+      <Mitigation>Monitor partition metrics; add write sharding suffix to PK if needed</Mitigation>
+    </Risk>
+    <Risk id="R2" severity="low">
+      <Description>Lambda cold starts may spike P95 latency during low traffic</Description>
+      <Mitigation>Provisioned concurrency for OrderAPI Lambda if latency SLA breached</Mitigation>
+      <FutureOption>Consider ECS Fargate if sustained traffic justifies always-on containers</FutureOption>
+    </Risk>
+    <Risk id="R3" severity="medium">
+      <Description>EventBridge to SQS async delay may impact notification timeliness</Description>
+      <Mitigation>Monitor end-to-end latency; set SQS visibility timeout appropriately</Mitigation>
+    </Risk>
+    <Risk id="R4" severity="low">
+      <Description>Modular monolith may require microservices if team/domain complexity grows</Description>
+      <Mitigation>Enforce module boundaries now; extract to microservices later if needed</Mitigation>
+      <FutureOption>CQRS pattern for read-heavy customer queries if scale demands separate read model</FutureOption>
+    </Risk>
+    <Risk id="R5" severity="high">
+      <Description>PCI-DSS compliance requires annual audit and secure token handling</Description>
+      <Mitigation>Use AWS-compliant services; tokenize via third-party provider; no card data in logs</Mitigation>
+    </Risk>
+  </Risks>
+
+  <Migration>
+    <FromCurrent>Python Flask monolith, MySQL, cron batch emails</FromCurrent>
+    <Strategy>
+      <Phase name="1-DataMigration">
+        <Step>Export MySQL orders to DynamoDB via AWS DMS or custom script</Step>
+        <Step>Migrate customer profiles to Aurora PostgreSQL</Step>
+        <Step>Validate data integrity and encryption</Step>
+      </Phase>
+      <Phase name="2-APITransition">
+        <Step>Deploy Lambda OrderAPI behind API Gateway</Step>
+        <Step>Run dual-write (Flask + Lambda) with traffic shadowing</Step>
+        <Step>Cutover DNS/load balancer to API Gateway</Step>
+      </Phase>
+      <Phase name="3-EventDriven">
+        <Step>Enable DynamoDB Streams to EventBridge</Step>
+        <Step>Deploy NotificationWorker Lambda with SQS</Step>
+        <Step>Deprecate cron batch emails</Step>
+      </Phase>
+      <Phase name="4-Decommission">
+        <Step>Monitor for 2 weeks; retire Flask monolith and MySQL</Step>
+      </Phase>
+    </Strategy>
+  </Migration>
+
+  <FutureConsiderations>
+    <Item>CQRS with separate read replicas if customer query load exceeds 500 rps</Item>
+    <Item>Saga pattern for multi-step order workflows (e.g., payment, inventory, shipping)</Item>
+    <Item>gRPC for internal service-to-service if microservices extraction occurs</Item>
+    <Item>GraphQL API layer for customer mobile app if richer query flexibility needed</Item>
+  </FutureConsiderations>
+</ArchitectureSpec>
+```

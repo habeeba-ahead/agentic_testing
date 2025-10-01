@@ -1,0 +1,221 @@
+```xml
+<ArchitectureSpec>
+  <Metadata>
+    <AppName>OrderTrack</AppName>
+    <Version>2.0-Modernized</Version>
+    <TargetCloud>AWS</TargetCloud>
+    <ArchitectureStyle>Event-Driven Microservices</ArchitectureStyle>
+    <LastUpdated>2024-01-01</LastUpdated>
+  </Metadata>
+
+  <SystemOverview>
+    <Description>
+      Modernized order tracking system decomposed into event-driven services.
+      Core domains: Order Management, Status Updates, Customer Notifications.
+      Serverless-first architecture using AWS managed services for scalability and cost optimization.
+    </Description>
+    <KeyDrivers>
+      <Driver>Decouple order capture from status updates and notifications</Driver>
+      <Driver>Enable async processing for customer notifications</Driver>
+      <Driver>Scale independently per traffic pattern (read-heavy vs write-heavy)</Driver>
+      <Driver>Reduce operational overhead via serverless</Driver>
+      <Driver>Maintain PCI-DSS compliance boundary isolation</Driver>
+    </KeyDrivers>
+  </SystemOverview>
+
+  <Decisions>
+    <Decision id="DEC-001">
+      <Title>Event-Driven Architecture with EventBridge</Title>
+      <Context>Order lifecycle generates multiple downstream actions (notifications, analytics, auditing)</Context>
+      <Choice>Use EventBridge as central event bus for domain events (OrderCreated, StatusChanged, OrderCompleted)</Choice>
+      <Rationale>Decouples producers from consumers, enables future extensibility, native AWS service integration</Rationale>
+      <Tradeoffs>Eventual consistency vs immediate consistency; requires idempotency in consumers</Tradeoffs>
+    </Decision>
+
+    <Decision id="DEC-002">
+      <Title>Hybrid Data Store Strategy</Title>
+      <Context>Orders require transactional integrity; status updates are high-frequency writes; customer profiles need relational queries</Context>
+      <Choice>Aurora Serverless v2 for orders and customer profiles; DynamoDB for order status events and real-time tracking</Choice>
+      <Rationale>Aurora provides ACID for order transactions and PCI compliance boundary; DynamoDB handles high-velocity status updates with single-digit ms latency</Rationale>
+      <Tradeoffs>Data synchronization complexity; dual-write pattern requires careful orchestration</Tradeoffs>
+    </Decision>
+
+    <Decision id="DEC-003">
+      <Title>Lambda Functions for Compute</Title>
+      <Context>Traffic is bursty (peak 150 rps, avg 30 rps); serverless-first mandate</Context>
+      <Choice>AWS Lambda (Python 3.11) for all API handlers and event processors</Choice>
+      <Rationale>Auto-scaling, pay-per-use, zero idle cost during low traffic, fits traffic profile</Rationale>
+      <Tradeoffs>Cold start latency (mitigated with provisioned concurrency for critical paths); 15-minute execution limit</Tradeoffs>
+    </Decision>
+
+    <Decision id="DEC-004">
+      <Title>API Gateway for External Interface</Title>
+      <Context>Need REST API for internal ops and customer read-only access</Context>
+      <Choice>API Gateway REST API with IAM and Cognito authorization</Choice>
+      <Rationale>Managed service, built-in throttling, request validation, integrates with Lambda</Rationale>
+      <Tradeoffs>Additional latency (~50ms overhead); cost per million requests</Tradeoffs>
+    </Decision>
+
+    <Decision id="DEC-005">
+      <Title>Async Notification Processing</Title>
+      <Context>Customer notifications (email/SMS) should not block order processing; batch cron replaced</Context>
+      <Choice>EventBridge triggers Lambda for notifications; SQS FIFO for guaranteed delivery with DLQ</Choice>
+      <Rationale>Decouples notification from order flow; SQS provides retry and DLQ for failed notifications</Rationale>
+      <Tradeoffs>Notification delay (eventual consistency); requires idempotency keys</Tradeoffs>
+    </Decision>
+
+    <Decision id="DEC-006">
+      <Title>PCI-DSS Compliance Isolation</Title>
+      <Context>Payment tokens must be handled per PCI-DSS requirements</Context>
+      <Choice>Separate Lambda execution role and VPC for payment token handling; tokens stored encrypted in Aurora with KMS; minimize scope to payment service only</Choice>
+      <Rationale>Reduces PCI compliance scope; encryption at rest and in transit; audit trail via CloudTrail</Rationale>
+      <Tradeoffs>Increased complexity in IAM policies; VPC Lambda has cold start penalty</Tradeoffs>
+    </Decision>
+
+    <Decision id="DEC-007">
+      <Title>Observability with CloudWatch and OTEL</Title>
+      <Context>Need distributed tracing across Lambda functions and async events</Context>
+      <Choice>CloudWatch Logs for structured JSON logs; X-Ray for distributed tracing; OTEL SDK in Lambda for custom metrics and spans</Choice>
+      <Rationale>Native AWS integration; OTEL provides vendor-neutral instrumentation; correlation IDs across async boundaries</Rationale>
+      <Tradeoffs>Additional Lambda execution time for instrumentation; CloudWatch Logs cost at scale</Tradeoffs>
+    </Decision>
+  </Decisions>
+
+  <Patterns>
+    <Pattern id="PAT-001">
+      <Name>Event Sourcing for Order Status</Name>
+      <Problem>Need audit trail and real-time status tracking with high write throughput</Problem>
+      <Solution>Store all status change events in DynamoDB; materialize current state in read model; publish events to EventBridge</Solution>
+      <Implementation>
+        - DynamoDB table: OrderStatusEvents (PK: orderId, SK: timestamp)
+        - Lambda streams processor maintains CurrentOrderStatus table
+        - EventBridge receives StatusChanged events for downstream consumers
+      </Implementation>
+    </Pattern>
+
+    <Pattern id="PAT-002">
+      <Name>CQRS for Order Queries</Name>
+      <Problem>Read and write patterns differ significantly; customers need fast read-only access</Problem>
+      <Solution>Separate write model (Aurora) from read model (DynamoDB); async synchronization via EventBridge</Solution>
+      <Implementation>
+        - Write: API Gateway → Lambda → Aurora (orders table)
+        - EventBridge OrderCreated event → Lambda → DynamoDB (read-optimized denormalized view)
+        - Read: API Gateway → Lambda → DynamoDB (sub-10ms latency)
+      </Implementation>
+    </Pattern>
+
+    <Pattern id="PAT-003">
+      <Name>Saga Pattern for Order Creation</Name>
+      <Problem>Order creation spans multiple services (inventory check, payment, notification); need compensating transactions</Problem>
+      <Solution>Step Functions orchestrates order creation saga with compensation logic</Solution>
+      <Implementation>
+        - Step Functions state machine coordinates: ValidateOrder → ReserveInventory → ProcessPayment → CreateOrder → NotifyCustomer
+        - Each step is idempotent Lambda function
+        - Compensation steps on failure (ReleaseInventory, RefundPayment)
+      </Implementation>
+    </Pattern>
+
+    <Pattern id="PAT-004">
+      <Name>Outbox Pattern for Reliable Event Publishing</Name>
+      <Problem>Ensure events are published when order state changes atomically</Problem>
+      <Solution>Write event to Aurora outbox table in same transaction; separate Lambda polls outbox and publishes to EventBridge</Solution>
+      <Implementation>
+        - Aurora table: EventOutbox (id, eventType, payload, published)
+        - Lambda triggered by EventBridge schedule (every 30s) reads unpublished events
+        - Publishes to EventBridge, marks as published
+        - DLQ for failed publications
+      </Implementation>
+    </Pattern>
+
+    <Pattern id="PAT-005">
+      <Name>API Composition for Customer Order View</Name>
+      <Problem>Customer needs unified view of order, status, and shipment from multiple services</Problem>
+      <Solution>API Gateway Lambda aggregates data from DynamoDB read models</Solution>
+      <Implementation>
+        - Lambda fetches order details, current status, shipment info in parallel
+        - Uses async/await for concurrent DynamoDB queries
+        - Caches response in API Gateway for 60s
+      </Implementation>
+    </Pattern>
+
+    <Pattern id="PAT-006">
+      <Name>Circuit Breaker for External Notification Services</Name>
+      <Problem>Email/SMS providers may be unavailable; prevent cascading failures</Problem>
+      <Solution>Lambda notification handler implements circuit breaker; failed messages to SQS DLQ for retry</Solution>
+      <Implementation>
+        - DynamoDB table tracks failure rate per provider
+        - Circuit opens after 5 consecutive failures
+        - Half-open state after 5 minutes
+        - DLQ messages trigger alarm for manual intervention
+      </Implementation>
+    </Pattern>
+  </Patterns>
+
+  <Components>
+    <Component id="COMP-001">
+      <Name>Order API Service</Name>
+      <Type>API</Type>
+      <Runtime>AWS Lambda (Python 3.11)</Runtime>
+      <Responsibilities>
+        <Responsibility>Accept order creation requests from internal ops</Responsibility>
+        <Responsibility>Validate order payload and business rules</Responsibility>
+        <Responsibility>Persist order to Aurora with transaction</Responsibility>
+        <Responsibility>Write event to outbox table</Responsibility>
+      </Responsibilities>
+      <Interfaces>
+        <Interface type="REST">POST /orders, GET /orders/{id}, PATCH /orders/{id}</Interface>
+      </Interfaces>
+      <Dependencies>
+        <Dependency>Aurora Serverless v2 (orders schema)</Dependency>
+        <Dependency>Secrets Manager (DB credentials)</Dependency>
+        <Dependency>KMS (payment token encryption)</Dependency>
+      </Dependencies>
+      <NFRs>
+        <NFR>P95 write latency &lt; 800ms</NFR>
+        <NFR>Handle 150 rps peak with auto-scaling</NFR>
+      </NFRs>
+    </Component>
+
+    <Component id="COMP-002">
+      <Name>Order Status Service</Name>
+      <Type>EventProcessor</Type>
+      <Runtime>AWS Lambda (Python 3.11)</Runtime>
+      <Responsibilities>
+        <Responsibility>Consume StatusChanged events from EventBridge</Responsibility>
+        <Responsibility>Write status events to DynamoDB (event sourcing)</Responsibility>
+        <Responsibility>Update materialized CurrentOrderStatus table</Responsibility>
+      </Responsibilities>
+      <Interfaces>
+        <Interface type="Event">EventBridge rule: OrderStatusChanged</Interface>
+      </Interfaces>
+      <Dependencies>
+        <Dependency>DynamoDB (OrderStatusEvents, CurrentOrderStatus tables)</Dependency>
+        <Dependency>EventBridge</Dependency>
+      </Dependencies>
+      <NFRs>
+        <NFR>Process events within 5 seconds (P95)</NFR>
+        <NFR>Idempotent processing (handle duplicate events)</NFR>
+      </NFRs>
+    </Component>
+
+    <Component id="COMP-003">
+      <Name>Customer Query Service</Name>
+      <Type>API</Type>
+      <Runtime>AWS Lambda (Python 3.11)</Runtime>
+      <Responsibilities>
+        <Responsibility>Provide read-only order and status queries for customers</Responsibility>
+        <Responsibility>Aggregate data from DynamoDB read models</Responsibility>
+        <Responsibility>Enforce customer authorization (own orders only)</Responsibility>
+      </Responsibilities>
+      <Interfaces>
+        <Interface type="REST">GET /customers/{customerId}/orders, GET /customers/{customerId}/orders/{orderId}</Interface>
+      </Interfaces>
+      <Dependencies>
+        <Dependency>DynamoDB (OrderReadModel, CurrentOrderStatus tables)</Dependency>
+        <Dependency>Cognito (customer authentication)</Dependency>
+      </Dependencies>
+      <NFRs>
+        <NFR>P95 read latency &lt; 300ms</NFR>
+        <NFR>99.9% availability</NFR>
+      </NFRs>
+    </Component

@@ -1,0 +1,23 @@
+You are selecting patterns from an approved catalog and emitting ArchitectureSpec XML.
+
+CATALOG:
+- DomainStyle: modular-monolith | microservices | SOA
+- IntegrationStyle: event-driven | REST | gRPC | batch
+- InfraBaseline: serverless | k8s | vms
+- DataTier: dynamodb | aurora | postgres | mysql | mongodb
+- Patterns: outbox, saga, api-gateway, circuit-breaker, cache-aside, cqrs (optional)
+- Observability: structured-logs, metrics, traces, audit-logs
+
+[SCHEMA]
+... (schema) ...
+
+[INPUT: BRD]
+{{BRD_TEXT}}
+
+[INPUT: GUARDRAILS]
+{{GUARDRAILS_TEXT}}
+
+RULES:
+- Choose only from CATALOG where applicable.
+- If multiple apply, pick the simplest and add others under <Risks> as “future option”.
+- XML only.

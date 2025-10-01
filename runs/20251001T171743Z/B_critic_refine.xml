@@ -1,0 +1,279 @@
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<ArchitectureSpec>
+  <Metadata>
+    <AppName>OrderTrack</AppName>
+    <Version>1.0</Version>
+    <Cloud>AWS</Cloud>
+    <Stage>MVP</Stage>
+  </Metadata>
+
+  <BusinessRequirements>
+    <Capability>Capture orders from internal operations users</Capability>
+    <Capability>Update order status throughout fulfillment lifecycle</Capability>
+    <Capability>Notify customers of order status changes</Capability>
+    <Capability>Provide read-only order visibility to customers</Capability>
+    <User role="internal_ops" access="read_write"/>
+    <User role="customer" access="read_only"/>
+    <Traffic peak_rps="150" avg_rps="30"/>
+    <DataVolume orders="200GB_per_year" includes="events, customer_profiles"/>
+  </BusinessRequirements>
+
+  <NonFunctionalRequirements>
+    <Availability target="99.9%"/>
+    <Performance>
+      <Latency operation="read" p95="300ms"/>
+      <Latency operation="write" p95="800ms"/>
+    </Performance>
+    <Compliance>
+      <Standard>PCI-DSS</Standard>
+      <Requirement>Tokenize payment data, no storage of card details</Requirement>
+    </Compliance>
+    <Compliance>
+      <Standard>PII_Handling</Standard>
+      <Requirement>Encrypt PII at rest and in transit</Requirement>
+    </Compliance>
+    <Scalability>Handle peak traffic with auto-scaling</Scalability>
+    <Cost>Minimize idle costs via serverless architecture</Cost>
+  </NonFunctionalRequirements>
+
+  <Layers>
+    <Layer name="API">
+      <Component>
+        <Name>OrderAPI</Name>
+        <Type>API Gateway REST</Type>
+        <Runtime>N/A</Runtime>
+        <Responsibility>Expose REST endpoints for order operations</Responsibility>
+        <Endpoints>
+          <Endpoint method="POST" path="/orders" auth="IAM">Create order</Endpoint>
+          <Endpoint method="GET" path="/orders/{id}" auth="IAM">Retrieve order</Endpoint>
+          <Endpoint method="PATCH" path="/orders/{id}/status" auth="IAM">Update status</Endpoint>
+          <Endpoint method="GET" path="/orders" auth="IAM">List orders with filters</Endpoint>
+        </Endpoints>
+        <Features>
+          <Feature>Request validation</Feature>
+          <Feature>Throttling (150 rps burst, 30 rps steady)</Feature>
+          <Feature>API key and IAM authentication</Feature>
+          <Feature>CORS for customer portal</Feature>
+        </Features>
+      </Component>
+    </Layer>
+
+    <Layer name="Compute">
+      <Component>
+        <Name>OrderService</Name>
+        <Type>Lambda</Type>
+        <Runtime>Python 3.11</Runtime>
+        <Responsibility>Handle order creation, retrieval, and status updates</Responsibility>
+        <Configuration>
+          <Memory>1024MB</Memory>
+          <Timeout>15s</Timeout>
+          <Concurrency>Reserved 50, Provisioned 5 for warm starts</Concurrency>
+        </Configuration>
+        <Integration>
+          <Downstream>OrderDatabase (Aurora)</Downstream>
+          <Downstream>OrderEventBus (EventBridge)</Downstream>
+          <Downstream>SecretsManager for DB credentials</Downstream>
+        </Integration>
+      </Component>
+
+      <Component>
+        <Name>NotificationService</Name>
+        <Type>Lambda</Type>
+        <Runtime>Python 3.11</Runtime>
+        <Responsibility>Process order events and send customer notifications</Responsibility>
+        <Configuration>
+          <Memory>512MB</Memory>
+          <Timeout>30s</Timeout>
+          <Concurrency>Reserved 20</Concurrency>
+        </Configuration>
+        <Trigger>EventBridge rule matching order.status.changed events</Trigger>
+        <Integration>
+          <Downstream>SES for email notifications</Downstream>
+          <Downstream>SNS for SMS notifications (optional)</Downstream>
+          <Downstream>CustomerProfileDB (DynamoDB)</Downstream>
+        </Integration>
+      </Component>
+
+      <Component>
+        <Name>EventProcessor</Name>
+        <Type>Lambda</Type>
+        <Runtime>Python 3.11</Runtime>
+        <Responsibility>Archive order events to S3 for audit and analytics</Responsibility>
+        <Configuration>
+          <Memory>256MB</Memory>
+          <Timeout>60s</Timeout>
+          <Concurrency>Reserved 10</Concurrency>
+        </Configuration>
+        <Trigger>SQS queue fed by EventBridge</Trigger>
+        <Integration>
+          <Downstream>S3 event archive bucket</Downstream>
+        </Integration>
+      </Component>
+    </Layer>
+
+    <Layer name="Data">
+      <Component>
+        <Name>OrderDatabase</Name>
+        <Type>Aurora Serverless v2 PostgreSQL</Type>
+        <Responsibility>Store relational order data with ACID guarantees</Responsibility>
+        <Schema>
+          <Table>orders (id, customer_id, status, payment_token_ref, created_at, updated_at)</Table>
+          <Table>order_items (id, order_id, product_id, quantity, price)</Table>
+          <Table>order_history (id, order_id, status, changed_by, changed_at)</Table>
+        </Schema>
+        <Configuration>
+          <MinCapacity>0.5 ACU</MinCapacity>
+          <MaxCapacity>8 ACU</MaxCapacity>
+          <AutoPause>true (after 5 min idle)</AutoPause>
+        </Configuration>
+        <Security>
+          <Encryption>KMS at rest</Encryption>
+          <Access>IAM database authentication</Access>
+          <Network>Private subnets only</Network>
+        </Security>
+      </Component>
+
+      <Component>
+        <Name>CustomerProfileDB</Name>
+        <Type>DynamoDB</Type>
+        <Responsibility>Store customer profiles and notification preferences</Responsibility>
+        <Schema>
+          <Table name="CustomerProfiles">
+            <PartitionKey>customer_id</PartitionKey>
+            <Attributes>email, phone, notification_preferences, pii_encrypted</Attributes>
+          </Table>
+        </Schema>
+        <Configuration>
+          <BillingMode>PAY_PER_REQUEST</BillingMode>
+          <PointInTimeRecovery>enabled</PointInTimeRecovery>
+        </Configuration>
+        <Security>
+          <Encryption>KMS with customer managed key</Encryption>
+          <Access>IAM policies, least privilege</Access>
+        </Security>
+      </Component>
+
+      <Component>
+        <Name>EventArchive</Name>
+        <Type>S3</Type>
+        <Responsibility>Store order events and logs for compliance and analytics</Responsibility>
+        <Configuration>
+          <Bucket>ordertrack-events-archive</Bucket>
+          <Lifecycle>Transition to Glacier after 90 days, retain 7 years</Lifecycle>
+          <Versioning>enabled</Versioning>
+        </Configuration>
+        <Security>
+          <Encryption>SSE-KMS</Encryption>
+          <Access>Bucket policy restricting to EventProcessor role</Access>
+          <Logging>S3 access logs enabled</Logging>
+        </Security>
+      </Component>
+
+      <Component>
+        <Name>PaymentTokenStore</Name>
+        <Type>Secrets Manager</Type>
+        <Responsibility>Store references to tokenized payment data from PCI-compliant gateway</Responsibility>
+        <Configuration>
+          <Rotation>Not applicable (tokens managed by external gateway)</Rotation>
+        </Configuration>
+        <Security>
+          <Encryption>KMS</Encryption>
+          <Access>OrderService Lambda role only</Access>
+        </Security>
+      </Component>
+    </Layer>
+
+    <Layer name="Messaging">
+      <Component>
+        <Name>OrderEventBus</Name>
+        <Type>EventBridge</Type>
+        <Responsibility>Distribute order lifecycle events to subscribers</Responsibility>
+        <Events>
+          <Event>order.created</Event>
+          <Event>order.status.changed</Event>
+          <Event>order.cancelled</Event>
+          <Event>order.completed</Event>
+        </Events>
+        <Rules>
+          <Rule name="NotifyCustomers" target="NotificationService Lambda"/>
+          <Rule name="ArchiveEvents" target="EventArchiveQueue SQS"/>
+        </Rules>
+      </Component>
+
+      <Component>
+        <Name>EventArchiveQueue</Name>
+        <Type>SQS</Type>
+        <Responsibility>Buffer events for batch processing to S3</Responsibility>
+        <Configuration>
+          <VisibilityTimeout>90s</VisibilityTimeout>
+          <MessageRetention>4 days</MessageRetention>
+          <DeadLetterQueue>enabled after 3 retries</DeadLetterQueue>
+        </Configuration>
+        <Security>
+          <Encryption>SSE-SQS</Encryption>
+        </Security>
+      </Component>
+    </Layer>
+
+    <Layer name="Security">
+      <Component>
+        <Name>IAM</Name>
+        <Type>IAM Roles and Policies</Type>
+        <Responsibility>Enforce least privilege access across services</Responsibility>
+        <Policies>
+          <Policy>OrderServiceRole: Aurora access, EventBridge PutEvents, Secrets read</Policy>
+          <Policy>NotificationServiceRole: DynamoDB read, SES send, SNS publish</Policy>
+          <Policy>EventProcessorRole: SQS consume, S3 write</Policy>
+          <Policy>APIGatewayRole: Lambda invoke</Policy>
+        </Policies>
+      </Component>
+
+      <Component>
+        <Name>KMS</Name>
+        <Type>KMS Customer Managed Keys</Type>
+        <Responsibility>Encrypt sensitive data at rest</Responsibility>
+        <Keys>
+          <Key alias="ordertrack/database" usage="Aurora encryption"/>
+          <Key alias="ordertrack/pii" usage="DynamoDB PII fields"/>
+          <Key alias="ordertrack/events" usage="S3 event archive"/>
+        </Keys>
+      </Component>
+
+      <Component>
+        <Name>WAF</Name>
+        <Type>AWS WAF</Type>
+        <Responsibility>Protect API Gateway from common web exploits</Responsibility>
+        <Rules>
+          <Rule>Rate limiting per IP</Rule>
+          <Rule>SQL injection protection</Rule>
+          <Rule>XSS protection</Rule>
+          <Rule>Geo-blocking (if required)</Rule>
+        </Rules>
+      </Component>
+    </Layer>
+
+    <Layer name="Observability">
+      <Component>
+        <Name>CloudWatch</Name>
+        <Type>CloudWatch Logs and Metrics</Type>
+        <Responsibility>Centralized logging and metrics collection</Responsibility>
+        <Configuration>
+          <LogGroups>
+            <LogGroup>/aws/lambda/OrderService retention=30 days</LogGroup>
+            <LogGroup>/aws/lambda/NotificationService retention=30 days</LogGroup>
+            <LogGroup>/aws/lambda/EventProcessor retention=30 days</LogGroup>
+            <LogGroup>/aws/apigateway/OrderAPI retention=14 days</LogGroup>
+          </LogGroups>
+          <Metrics>
+            <Metric>API Gateway 4xx/5xx errors</Metric>
+            <Metric>Lambda duration, errors, throttles</Metric>
+            <Metric>Aurora connections, CPU, storage</Metric>
+            <Metric>DynamoDB consumed capacity</Metric>
+            <Metric>SQS queue depth</Metric>
+          </Metrics>
+        </Configuration>
+      </Component>
+
+      <Component>
+        <Name>OTEL</Name
