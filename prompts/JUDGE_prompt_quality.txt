@@ -1,4 +1,5 @@
-You are judging WHICH PROMPT produced the best ArchitectureSpec XML for downstream Infra-as-Code (IaC) generation.
+You are judging WHICH PROMPT produced the best ArchitectureSpec XML for downstream Infra-as-Code (IaC) generation. 
+The previous agent has read the architectural patterns of the organization and converted them into Claude Instructions (XML).
 
 Return STRICT JSON only with this schema:
 {

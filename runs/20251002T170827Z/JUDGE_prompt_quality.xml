@@ -1,0 +1,22 @@
+json
+{
+  "ranking": [
+    {
+      "prompt": "prompt_a",
+      "score": 42,
+      "reasons": "Severe guardrail violations: EC2/ECS/EKS contradict serverless-first; RDS/OpenSearch contradict DynamoDB/Aurora; missing EventBridge/SQS; IaC mappability weak due to non-serverless choices."
+    },
+    {
+      "prompt": "prompt_b",
+      "score": 38,
+      "reasons": "Critical guardrail misalignment: proposes EC2/ECS/RDS/OpenSearch against serverless-first mandate; CloudMapping references non-compliant services; lacks EventBridge/API Gateway; IaC not serverless-oriented."
+    },
+    {
+      "prompt": "prompt_c",
+      "score": 35,
+      "reasons": "Fundamental guardrail breach: EC2/ECS/RDS/OpenSearch violate serverless-first; no DynamoDB/EventBridge/SQS/API Gateway; CloudMapping non-compliant; IaC targets wrong service layer entirely."
+    }
+  ],
+  "winner": "prompt_a",
+  "notes": "All three prompts fail guardrail alignment catastrophically by proposing lift-and-shift EC2/ECS/RDS architectures when guardrails mandate serverless-first (Lambda/DynamoDB/Aurora Serverless/EventBridge/API Gateway). Prompt_a scores marginally higher due to slightly better risk articulation and constraint clarity, but none are suitable for downstream IaC generation without complete redesign to serverless patterns."
+}

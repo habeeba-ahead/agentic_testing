@@ -1,0 +1,38 @@
+```json
+{
+  "ranking": [
+    {
+      "prompt": "E_combined",
+      "score": 92,
+      "reasons": "Perfect guardrail alignment (serverless-first, DynamoDB/Aurora/S3, EventBridge/SQS, Python 3.11); explicit CloudMapping with all 5 sections; complete NFRs with numeric targets; actionable constraints; BRD conflicts documented in Risks."
+    },
+    {
+      "prompt": "A_schema_compiler",
+      "score": 88,
+      "reasons": "Strong guardrail alignment and IaC mappability; all required tags present; comprehensive CloudMapping; minor deduction for slightly verbose Risks section and less crisp service boundary definitions vs E_combined."
+    },
+    {
+      "prompt": "C_catalog_first",
+      "score": 68,
+      "reasons": "Good component catalog but missing 6 required tags (CloudMapping, Constraints, Context, Decisions, NonFunctionals, Services); guardrails mostly followed but structure hinders IaC generation; incomplete NFR targets."
+    },
+    {
+      "prompt": "D_diff_to_target",
+      "score": 62,
+      "reasons": "Detailed current-vs-target analysis but missing 6 required tags; no CloudMapping section; NFRs lack numeric targets; verbose narrative format reduces IaC mappability; guardrails followed in prose but not structured for tooling."
+    },
+    {
+      "prompt": "B_critic_refine",
+      "score": 48,
+      "reasons": "Missing all 8 required tags; no structured CloudMapping/Services/Patterns; guardrails mentioned in prose but not enforced in architecture; auto_metrics confirm structural deficiencies; unsuitable for IaC generation."
+    },
+    {
+      "prompt": "JUDGE_prompt_quality",
+      "score": 12,
+      "reasons": "Meta-analysis JSON, not ArchitectureSpec XML; missing all required tags; no IaC-mappable content; included only to demonstrate contrast with actual architecture outputs."
+    }
+  ],
+  "winner": "E_combined",
+  "notes": "E_combined and A_schema_compiler both excel at guardrail alignment (x3 weight) and IaC mappability (x4 weight). E_combined wins by tighter service definitions, clearer BRD-vs-guardrail conflict resolution in Risks (EC2 lift-and-shift vs serverless-first), and slightly more actionable Constraints. Both correctly map to Lambda/DynamoDB/Aurora Serverless v2/EventBridge/SQS per guardrails. C_catalog_first and D_diff_to_target provide useful content but lack required XML structure. B_critic_refine's missing tags and prose-heavy format make it unsuitable for downstream IaC tooling despite reasonable guardrail adherence in narrative."
+}
+```

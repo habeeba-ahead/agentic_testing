@@ -26,7 +26,7 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # --- supply our own httpx client so Anthropic doesn't pass proxies ---
-httpx_client = httpx.Client(timeout=60.0)  # keep it simple; no proxies arg
+httpx_client = httpx.Client(timeout=120.0)  # keep it simple; no proxies arg
 
 # --- client ---
 api_key = os.environ.get("ANTHROPIC_API_KEY")

@@ -1,0 +1,187 @@
+```xml
+<ArchitectureSpec>
+  <Metadata>
+    <ProjectName>Application Modernization &amp; Migration to AWS</ProjectName>
+    <Description>Lift-and-shift migration with serverless-first refactoring using Terraform IaC and Python automation</Description>
+    <TargetCloud>AWS</TargetCloud>
+    <Runtime>Python 3.11</Runtime>
+  </Metadata>
+
+  <DomainStyle>
+    <Selected>modular-monolith</Selected>
+    <Rationale>Initial lift-and-shift phase supports monolithic on-prem application structure; modular design enables future decomposition to microservices during refactor phase</Rationale>
+  </DomainStyle>
+
+  <IntegrationStyle>
+    <Primary>event-driven</Primary>
+    <Secondary>REST</Secondary>
+    <Rationale>Event-driven via EventBridge for async workflows and decoupling; REST via API Gateway for external/internal APIs per guardrails; batch file transfers migrate to S3 event triggers</Rationale>
+  </IntegrationStyle>
+
+  <InfraBaseline>
+    <Selected>serverless</Selected>
+    <Rationale>Serverless-first per guardrails: Lambda for Python automation, Step Functions for orchestration, API Gateway for APIs, EventBridge for events; reduces operational overhead and aligns with cost caps</Rationale>
+  </InfraBaseline>
+
+  <DataTier>
+    <Primary>aurora</Primary>
+    <Secondary>dynamodb</Secondary>
+    <Tertiary>S3</Tertiary>
+    <Rationale>Aurora Serverless v2 for SQL-based relational DB migration from on-prem; DynamoDB for high-write KV workloads (session state, caching); S3 for object storage, backups, event logs, and Glacier archival</Rationale>
+  </DataTier>
+
+  <Patterns>
+    <Pattern name="api-gateway">
+      <Usage>Expose REST APIs with IAM/Cognito auth, throttling, and request validation</Usage>
+    </Pattern>
+    <Pattern name="circuit-breaker">
+      <Usage>Protect downstream dependencies (Aurora, external APIs) with Lambda timeout/retry logic and EventBridge DLQ</Usage>
+    </Pattern>
+    <Pattern name="cache-aside">
+      <Usage>DynamoDB as cache layer for frequently accessed relational data to reduce Aurora load</Usage>
+    </Pattern>
+    <Pattern name="outbox">
+      <Usage>Aurora outbox table for transactional event publishing to EventBridge ensuring consistency</Usage>
+    </Pattern>
+  </Patterns>
+
+  <Observability>
+    <Logs>
+      <Type>structured-logs</Type>
+      <Implementation>CloudWatch Logs with JSON structured format; Lambda Powertools for Python correlation IDs</Implementation>
+    </Logs>
+    <Metrics>
+      <Type>metrics</Type>
+      <Implementation>CloudWatch Metrics for Lambda, API Gateway, Aurora, DynamoDB; custom business metrics via EMF</Implementation>
+    </Metrics>
+    <Traces>
+      <Type>traces</Type>
+      <Implementation>AWS X-Ray with OTEL instrumentation for distributed tracing across Lambda, API Gateway, EventBridge</Implementation>
+    </Traces>
+    <Audit>
+      <Type>audit-logs</Type>
+      <Implementation>CloudTrail for API calls, GuardDuty for threat detection, Security Hub for MEC compliance validation</Implementation>
+    </Audit>
+  </Observability>
+
+  <Security>
+    <Authentication>IAM roles for service-to-service; AWS SSO integration for user access</Authentication>
+    <Authorization>IAM least privilege policies; resource-based policies on Lambda, API Gateway</Authorization>
+    <Encryption>
+      <AtRest>KMS encryption for Aurora, DynamoDB, S3, CloudWatch Logs</AtRest>
+      <InTransit>TLS 1.2+ for all API Gateway endpoints, Aurora connections, EventBridge</InTransit>
+    </Encryption>
+    <SecretsManagement>AWS Secrets Manager for database credentials, API keys; automatic rotation enabled</SecretsManagement>
+  </Security>
+
+  <Networking>
+    <VPC>
+      <Design>Private subnets for Lambda (VPC-attached for Aurora access), public subnets for ALB if needed</Design>
+      <Connectivity>VPC endpoints for S3, DynamoDB, Secrets Manager to avoid NAT Gateway costs</Connectivity>
+    </VPC>
+    <LoadBalancing>API Gateway for serverless APIs; ALB only if EC2 lift-and-shift phase requires</LoadBalancing>
+  </Networking>
+
+  <DataManagement>
+    <Migration>
+      <Tool>AWS DMS for relational DB migration from on-prem to Aurora with CDC</Tool>
+      <Validation>Schema validation pre-cutover; data integrity checks post-migration</Validation>
+    </Migration>
+    <Backup>
+      <Strategy>Aurora automated backups (35-day retention); S3 versioning and lifecycle to Glacier for long-term</Strategy>
+      <DR>Multi-AZ Aurora for HA; cross-region S3 replication for critical data; RPO/RTO per business requirements</DR>
+    </Backup>
+  </DataManagement>
+
+  <IaC>
+    <Tool>Terraform</Tool>
+    <Structure>Modular reusable modules for VPC, Lambda, Aurora, API Gateway, EventBridge, IAM; environment-specific tfvars</Structure>
+    <StateManagement>S3 backend with DynamoDB locking; versioning enabled</StateManagement>
+  </IaC>
+
+  <CICD>
+    <Pipeline>
+      <Stages>Validate → Plan → Apply (Terraform); Test → Package → Deploy (Python Lambda)</Stages>
+      <Tools>AWS CodePipeline, CodeBuild for Terraform and Python; GitHub Actions alternative</Tools>
+      <Testing>Unit tests (pytest), integration tests (moto), Terraform validate/plan in PR</Testing>
+    </Pipeline>
+  </CICD>
+
+  <CostOptimization>
+    <Compute>Lambda with provisioned concurrency only for latency-sensitive functions; Step Functions Express for high-volume workflows</Compute>
+    <Data>Aurora Serverless v2 auto-scaling; DynamoDB on-demand for unpredictable workloads; S3 Intelligent-Tiering and lifecycle policies</Data>
+    <Monitoring>CloudWatch Logs retention policies (7-30 days); metric filters to reduce ingestion costs</Monitoring>
+    <Tagging>Mandatory cost allocation tags (Environment, Application, Owner) enforced via Terraform</Tagging>
+  </CostOptimization>
+
+  <MigrationPhases>
+    <Phase name="Pre-Migration">
+      <Activities>MEC validation, Terraform module development, Python automation testing, DMS setup, security baseline</Activities>
+      <ExitCriteria>All MEC gaps remediated, IaC tested in non-prod, DMS replication validated</ExitCriteria>
+    </Phase>
+    <Phase name="Lift-and-Shift">
+      <Activities>Migrate on-prem SQL DB to Aurora via DMS, deploy Lambda functions for existing workflows, API Gateway for REST endpoints</Activities>
+      <ExitCriteria>Application functional in AWS, performance baseline met, no critical issues</ExitCriteria>
+    </Phase>
+    <Phase name="Refactor">
+      <Activities>Decompose monolith to event-driven modules, implement outbox pattern, optimize with DynamoDB caching, containerize if needed (ECS Fargate)</Activities>
+      <ExitCriteria>Event-driven architecture operational, cost targets achieved, observability validated</ExitCriteria>
+    </Phase>
+    <Phase name="Cutover">
+      <Activities>DNS switch, traffic migration, on-prem failback readiness, hypercare monitoring</Activities>
+      <ExitCriteria>Business sign-off, MEC compliance validated, no rollback required</ExitCriteria>
+    </Phase>
+  </MigrationPhases>
+
+  <Risks>
+    <Risk>
+      <Description>Schema drift during DMS migration</Description>
+      <Mitigation>Pre-cutover validation with AWS SCT; test migrations in staging; implement outbox pattern for consistency</Mitigation>
+    </Risk>
+    <Risk>
+      <Description>Lambda cold start latency for synchronous APIs</Description>
+      <Mitigation>Provisioned concurrency for critical endpoints; consider ECS Fargate for sustained workloads as future option</Mitigation>
+    </Risk>
+    <Risk>
+      <Description>Aurora Serverless v2 scaling lag under sudden load</Description>
+      <Mitigation>Set appropriate min/max ACU; implement cache-aside with DynamoDB; circuit-breaker pattern for graceful degradation</Mitigation>
+    </Risk>
+    <Risk>
+      <Description>Cost overruns from unoptimized serverless usage</Description>
+      <Mitigation>AWS Budgets with alerts; tagging enforcement; CloudWatch Logs retention policies; S3 lifecycle rules</Mitigation>
+    </Risk>
+    <Risk>
+      <Description>Vendor licensing constraints in cloud</Description>
+      <Mitigation>Validate BYOL vs. license-included Aurora; negotiate cloud licensing pre-migration</Mitigation>
+    </Risk>
+    <Risk>
+      <Description>Future microservices decomposition complexity</Description>
+      <Mitigation>Modular-monolith design enables gradual extraction; saga pattern available for distributed transactions if needed</Mitigation>
+    </Risk>
+    <Risk>
+      <Description>Limited observability during initial migration</Description>
+      <Mitigation>Deploy structured logging and X-Ray tracing from day one; CloudWatch dashboards for key metrics; audit logs via CloudTrail</Mitigation>
+    </Risk>
+  </Risks>
+
+  <AcceptanceCriteria>
+    <Criterion>All infrastructure provisioned via Terraform with modular, reusable code</Criterion>
+    <Criterion>Python automation operational for workflows using Lambda and Step Functions</Criterion>
+    <Criterion>MEC compliance validated via Security Hub and manual checklist</Criterion>
+    <Criterion>Application functional in AWS with performance meeting or exceeding baseline</Criterion>
+    <Criterion>Observability stack operational: structured logs, metrics, traces, audit logs</Criterion>
+    <Criterion>Backup and DR tested with documented RPO/RTO</Criterion>
+    <Criterion>Security controls validated: encryption at rest/transit, IAM least privilege, Secrets Manager rotation</Criterion>
+    <Criterion>Cost within budget with tagging and monitoring in place</Criterion>
+    <Criterion>Business sign-off received post-hypercare period</Criterion>
+  </AcceptanceCriteria>
+
+  <FutureConsiderations>
+    <Consideration>Microservices decomposition with saga pattern for distributed transactions</Consideration>
+    <Consideration>EKS for containerized workloads if Lambda limitations encountered</Consideration>
+    <Consideration>CQRS pattern for read-heavy workloads with separate read models in DynamoDB</Consideration>
+    <Consideration>gRPC for high-performance service-to-service communication</Consideration>
+    <Consideration>OpenSearch for advanced log analytics beyond CloudWatch Logs Insights</Consideration>
+  </FutureConsiderations>
+</ArchitectureSpec>
+```

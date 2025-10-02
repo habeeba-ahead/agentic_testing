@@ -1,0 +1,213 @@
+```xml
+<ArchitectureSpec>
+  <Metadata>
+    <ProjectName>Application Modernization to AWS Serverless</ProjectName>
+    <Version>1.0</Version>
+    <LastUpdated>2024-01-10</LastUpdated>
+    <Architect>Cloud Migration Team</Architect>
+    <Status>Target State Design</Status>
+  </Metadata>
+
+  <SystemOverview>
+    <Description>
+      Modernization of on-premises x86 application to AWS serverless architecture.
+      Migration from legacy SQL databases and VM-based compute to event-driven,
+      serverless-first design using Python 3.11, DynamoDB, Aurora Serverless v2,
+      and managed AWS services. All infrastructure provisioned via Terraform IaC.
+    </Description>
+    <BusinessDrivers>
+      <Driver id="BD1">Eliminate infrastructure management overhead through serverless adoption</Driver>
+      <Driver id="BD2">Achieve elastic scalability with pay-per-use cost model</Driver>
+      <Driver id="BD3">Meet MEC compliance requirements for security, encryption, and observability</Driver>
+      <Driver id="BD4">Enable rapid deployment through CI/CD and IaC automation</Driver>
+      <Driver id="BD5">Improve reliability with multi-AZ managed services and automated failover</Driver>
+    </BusinessDrivers>
+    <Constraints>
+      <Constraint id="C1">Must use AWS serverless services as primary compute model</Constraint>
+      <Constraint id="C2">Python 3.11 runtime for all application code and automation</Constraint>
+      <Constraint id="C3">Terraform for all infrastructure provisioning</Constraint>
+      <Constraint id="C4">DynamoDB for high-write key-value workloads</Constraint>
+      <Constraint id="C5">Aurora Serverless v2 for relational data requirements</Constraint>
+      <Constraint id="C6">Zero idle costs during non-business hours</Constraint>
+      <Constraint id="C7">All data encrypted at rest and in transit per MEC</Constraint>
+    </Constraints>
+  </SystemOverview>
+
+  <Stakeholders>
+    <Stakeholder>
+      <Role>Business Owner</Role>
+      <Concerns>Cost predictability, business continuity during migration, feature parity</Concerns>
+      <Requirements>RPO/RTO compliance, minimal downtime, budget adherence</Requirements>
+    </Stakeholder>
+    <Stakeholder>
+      <Role>Security Team</Role>
+      <Concerns>MEC compliance, data protection, IAM least privilege</Concerns>
+      <Requirements>Encryption, audit trails, vulnerability management, GuardDuty integration</Requirements>
+    </Stakeholder>
+    <Stakeholder>
+      <Role>Development Team</Role>
+      <Concerns>Developer experience, deployment velocity, debugging capabilities</Concerns>
+      <Requirements>CI/CD pipelines, structured logging, distributed tracing, local testing</Requirements>
+    </Stakeholder>
+    <Stakeholder>
+      <Role>Operations Team</Role>
+      <Concerns>Observability, incident response, cost management</Concerns>
+      <Requirements>CloudWatch dashboards, alarms, OTEL integration, cost allocation tags</Requirements>
+    </Stakeholder>
+  </Stakeholders>
+
+  <FunctionalRequirements>
+    <Requirement id="FR1">
+      <Name>Event-Driven Processing</Name>
+      <Description>Process application events asynchronously using EventBridge and Lambda</Description>
+      <Priority>High</Priority>
+      <AcceptanceCriteria>Events routed to appropriate handlers with at-least-once delivery</AcceptanceCriteria>
+    </Requirement>
+    <Requirement id="FR2">
+      <Name>REST API Exposure</Name>
+      <Description>Expose business functionality via API Gateway REST APIs</Description>
+      <Priority>High</Priority>
+      <AcceptanceCriteria>APIs authenticated via IAM, request/response validation, rate limiting</AcceptanceCriteria>
+    </Requirement>
+    <Requirement id="FR3">
+      <Name>Data Persistence</Name>
+      <Description>Store high-write KV data in DynamoDB, relational data in Aurora Serverless v2</Description>
+      <Priority>High</Priority>
+      <AcceptanceCriteria>Sub-10ms DynamoDB latency, Aurora auto-scaling based on load</AcceptanceCriteria>
+    </Requirement>
+    <Requirement id="FR4">
+      <Name>Batch Processing</Name>
+      <Description>Execute batch workloads using Step Functions orchestrating Lambda functions</Description>
+      <Priority>Medium</Priority>
+      <AcceptanceCriteria>Workflows handle retries, error handling, and state persistence</AcceptanceCriteria>
+    </Requirement>
+    <Requirement id="FR5">
+      <Name>File Processing</Name>
+      <Description>Process files uploaded to S3 with event-triggered Lambda functions</Description>
+      <Priority>Medium</Priority>
+      <AcceptanceCriteria>S3 events trigger processing within 1 second, results stored durably</AcceptanceCriteria>
+    </Requirement>
+    <Requirement id="FR6">
+      <Name>Work Queue Management</Name>
+      <Description>Manage asynchronous work items via SQS queues with Lambda consumers</Description>
+      <Priority>Medium</Priority>
+      <AcceptanceCriteria>Dead-letter queues configured, visibility timeout tuned, batch processing enabled</AcceptanceCriteria>
+    </Requirement>
+    <Requirement id="FR7">
+      <Name>Infrastructure as Code</Name>
+      <Description>All AWS resources provisioned via Terraform modules</Description>
+      <Priority>High</Priority>
+      <AcceptanceCriteria>Terraform state in S3 with DynamoDB locking, modular reusable code</AcceptanceCriteria>
+    </Requirement>
+    <Requirement id="FR8">
+      <Name>Secrets Management</Name>
+      <Description>Store and rotate credentials using AWS Secrets Manager</Description>
+      <Priority>High</Priority>
+      <AcceptanceCriteria>No hardcoded secrets, automatic rotation for database credentials</AcceptanceCriteria>
+    </Requirement>
+  </FunctionalRequirements>
+
+  <NonFunctionalRequirements>
+    <Requirement id="NFR1">
+      <Category>Performance</Category>
+      <Description>API response time p99 under 500ms, Lambda cold start under 2s</Description>
+      <Metric>CloudWatch metrics for API Gateway latency and Lambda duration</Metric>
+    </Requirement>
+    <Requirement id="NFR2">
+      <Category>Scalability</Category>
+      <Description>Auto-scale to handle 10x traffic spikes without manual intervention</Description>
+      <Metric>Lambda concurrent executions, DynamoDB consumed capacity, Aurora ACU scaling</Metric>
+    </Requirement>
+    <Requirement id="NFR3">
+      <Category>Availability</Category>
+      <Description>99.9% uptime SLA with multi-AZ deployment for all stateful services</Description>
+      <Metric>CloudWatch composite alarms, uptime monitoring</Metric>
+    </Requirement>
+    <Requirement id="NFR4">
+      <Category>Security</Category>
+      <Description>MEC compliance: encryption at rest/transit, IAM least privilege, audit logging</Description>
+      <Metric>AWS Config rules, Security Hub findings, GuardDuty alerts</Metric>
+    </Requirement>
+    <Requirement id="NFR5">
+      <Category>Observability</Category>
+      <Description>Structured JSON logs, distributed tracing via OTEL, centralized dashboards</Description>
+      <Metric>CloudWatch Logs Insights queries, X-Ray trace analysis, custom dashboards</Metric>
+    </Requirement>
+    <Requirement id="NFR6">
+      <Category>Cost</Category>
+      <Description>Zero idle costs outside business hours, 30% cost reduction vs on-prem baseline</Description>
+      <Metric>AWS Cost Explorer, resource tagging, budget alerts</Metric>
+    </Requirement>
+    <Requirement id="NFR7">
+      <Category>Disaster Recovery</Category>
+      <Description>RPO 1 hour, RTO 4 hours with automated backup and cross-region replication</Description>
+      <Metric>Backup completion status, restore test results, replication lag</Metric>
+    </Requirement>
+    <Requirement id="NFR8">
+      <Category>Maintainability</Category>
+      <Description>Modular Terraform code, Python type hints, automated testing, documentation</Description>
+      <Metric>Code coverage, Terraform plan success rate, documentation completeness</Metric>
+    </Requirement>
+  </NonFunctionalRequirements>
+
+  <Decisions>
+    <Decision id="DEC1">
+      <Title>Serverless-First Architecture</Title>
+      <Context>Migrating from VM-based on-premises infrastructure to cloud-native</Context>
+      <Options>
+        <Option>EC2 lift-and-shift with Auto Scaling Groups</Option>
+        <Option>ECS/EKS containerized workloads</Option>
+        <Option>Serverless with Lambda, API Gateway, managed databases</Option>
+      </Options>
+      <Choice>Serverless with Lambda, API Gateway, managed databases</Choice>
+      <Rationale>
+        Eliminates infrastructure management, provides automatic scaling, reduces idle costs to zero,
+        aligns with guardrails for serverless-first approach. Lambda scales per-request, DynamoDB
+        and Aurora Serverless v2 scale automatically. No patching or capacity planning required.
+      </Rationale>
+      <Implications>
+        Requires application refactoring from monolithic to event-driven microservices.
+        Cold start latency must be managed. Stateless function design required.
+      </Implications>
+    </Decision>
+    <Decision id="DEC2">
+      <Title>DynamoDB for High-Write Key-Value Workloads</Title>
+      <Context>Need to handle high-throughput writes with low latency</Context>
+      <Options>
+        <Option>Aurora Serverless v2 for all data</Option>
+        <Option>DynamoDB for KV, Aurora for relational</Option>
+        <Option>DocumentDB for document storage</Option>
+      </Options>
+      <Choice>DynamoDB for KV, Aurora for relational</Choice>
+      <Rationale>
+        DynamoDB provides single-digit millisecond latency at any scale, automatic partitioning,
+        and on-demand billing. Ideal for high-write session data, user profiles, and event logs.
+        Aurora Serverless v2 handles complex relational queries and transactions where needed.
+      </Rationale>
+      <Implications>
+        Data modeling must account for DynamoDB access patterns. No joins or complex queries.
+        Eventual consistency model requires application-level handling.
+      </Implications>
+    </Decision>
+    <Decision id="DEC3">
+      <Title>EventBridge for Asynchronous Event Routing</Title>
+      <Context>Need to decouple services and enable event-driven architecture</Context>
+      <Options>
+        <Option>SNS/SQS for all messaging</Option>
+        <Option>EventBridge for event routing, SQS for work queues</Option>
+        <Option>Kinesis for streaming events</Option>
+      </Options>
+      <Choice>EventBridge for event routing, SQS for work queues</Choice>
+      <Rationale>
+        EventBridge provides schema registry, content-based filtering, and native AWS service
+        integration. SQS handles reliable work queue processing with visibility timeout and DLQ.
+        Separation of concerns: EventBridge for pub/sub events, SQS for task queues.
+      </Rationale>
+      <Implications>
+        Event schema versioning required. Consumers must handle duplicate events (at-least-once).
+        SQS visibility timeout tuning needed for long-running tasks.
+      </Implications>
+    </Decision>
+    <Decision id="DEC4">
+      <Title>API Gateway for REST API Management</Title>
+      <Context>Need to expose business functionality via secure, scalable APIs</Context>
