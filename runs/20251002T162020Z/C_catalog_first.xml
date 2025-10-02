@@ -1,0 +1,254 @@
+```xml
+<ArchitectureSpec>
+  <Metadata>
+    <ProjectName>Application Modernization &amp; Migration to AWS</ProjectName>
+    <TargetCloud>AWS</TargetCloud>
+    <Runtime>Python 3.11</Runtime>
+    <IaC>Terraform</IaC>
+    <Approach>Lift-and-Shift to Serverless Refactor</Approach>
+  </Metadata>
+
+  <Styles>
+    <DomainStyle>modular-monolith</DomainStyle>
+    <IntegrationStyle>event-driven</IntegrationStyle>
+    <InfraBaseline>serverless</InfraBaseline>
+    <DataTier>
+      <Primary>dynamodb</Primary>
+      <Secondary>aurora</Secondary>
+      <ObjectStore>S3</ObjectStore>
+    </DataTier>
+  </Styles>
+
+  <Patterns>
+    <Pattern name="api-gateway">
+      <Purpose>REST API exposure for internal and external interfaces</Purpose>
+      <Implementation>AWS API Gateway with Lambda integration</Implementation>
+    </Pattern>
+    <Pattern name="event-driven">
+      <Purpose>Async integration via EventBridge for decoupled workflows</Purpose>
+      <Implementation>EventBridge for event routing, SQS for work queues</Implementation>
+    </Pattern>
+    <Pattern name="outbox">
+      <Purpose>Ensure transactional consistency for event publishing from DynamoDB</Purpose>
+      <Implementation>DynamoDB Streams to Lambda to EventBridge</Implementation>
+    </Pattern>
+    <Pattern name="circuit-breaker">
+      <Purpose>Resilience for external API calls and legacy system integration</Purpose>
+      <Implementation>Lambda with exponential backoff and DLQ for failed invocations</Implementation>
+    </Pattern>
+    <Pattern name="cache-aside">
+      <Purpose>Reduce Aurora read load for frequently accessed relational data</Purpose>
+      <Implementation>ElastiCache for Redis or DynamoDB DAX for caching layer</Implementation>
+    </Pattern>
+  </Patterns>
+
+  <Components>
+    <Component name="API Layer">
+      <Type>API Gateway</Type>
+      <Runtime>REST</Runtime>
+      <Authentication>IAM, AWS SSO integration</Authentication>
+      <Authorization>IAM roles and policies</Authorization>
+      <Encryption>TLS 1.2+ in transit, KMS at rest</Encryption>
+    </Component>
+
+    <Component name="Compute Layer">
+      <Type>AWS Lambda</Type>
+      <Runtime>Python 3.11</Runtime>
+      <Purpose>Application logic, automation, orchestration</Purpose>
+      <Scaling>Auto-scaling based on invocation rate</Scaling>
+      <Timeout>15 minutes max (Step Functions for longer workflows)</Timeout>
+    </Component>
+
+    <Component name="Orchestration">
+      <Type>AWS Step Functions</Type>
+      <Purpose>Complex workflows, migration automation, batch processing</Purpose>
+      <Integration>Lambda, Glue, DMS</Integration>
+    </Component>
+
+    <Component name="Data Migration">
+      <Type>AWS DMS</Type>
+      <Purpose>Migrate on-prem SQL databases to Aurora Serverless v2</Purpose>
+      <Validation>Schema validation, data integrity checks</Validation>
+    </Component>
+
+    <Component name="High-Write KV Store">
+      <Type>DynamoDB</Type>
+      <Purpose>Session state, high-velocity transactional data</Purpose>
+      <Capacity>On-demand or provisioned with auto-scaling</Capacity>
+      <Streams>Enabled for outbox pattern</Streams>
+      <Encryption>KMS encryption at rest</Encryption>
+    </Component>
+
+    <Component name="Relational Database">
+      <Type>Aurora Serverless v2</Type>
+      <Purpose>Legacy SQL workloads, relational data</Purpose>
+      <Deployment>Multi-AZ for HA</Deployment>
+      <Backup>Automated backups to S3, point-in-time recovery</Backup>
+      <Encryption>KMS encryption at rest, TLS in transit</Encryption>
+    </Component>
+
+    <Component name="Object Storage">
+      <Type>S3</Type>
+      <Purpose>Event logs, batch files, backups, DR archives</Purpose>
+      <Lifecycle>S3 Intelligent-Tiering, Glacier for long-term retention</Lifecycle>
+      <Versioning>Enabled for compliance and audit</Versioning>
+      <Encryption>SSE-KMS</Encryption>
+    </Component>
+
+    <Component name="Event Bus">
+      <Type>EventBridge</Type>
+      <Purpose>Async event routing between services and external systems</Purpose>
+      <Rules>Route events to Lambda, SQS, Step Functions</Rules>
+      <Schema>Schema registry for event validation</Schema>
+    </Component>
+
+    <Component name="Work Queues">
+      <Type>SQS</Type>
+      <Purpose>Decouple producers and consumers, batch processing</Purpose>
+      <DLQ>Dead-letter queues for failed message handling</DLQ>
+      <Encryption>SSE-SQS or SSE-KMS</Encryption>
+    </Component>
+
+    <Component name="Secrets Management">
+      <Type>AWS Secrets Manager</Type>
+      <Purpose>Database credentials, API keys, third-party tokens</Purpose>
+      <Rotation>Automatic rotation for RDS credentials</Rotation>
+    </Component>
+
+    <Component name="Networking">
+      <Type>VPC</Type>
+      <Subnets>Private subnets for Lambda, Aurora; public for ALB</Subnets>
+      <LoadBalancer>Application Load Balancer for legacy EC2 lift-and-shift phase</LoadBalancer>
+      <Endpoints>VPC endpoints for S3, DynamoDB, Secrets Manager</Endpoints>
+    </Component>
+  </Components>
+
+  <Observability>
+    <Logs>
+      <Type>structured-logs</Type>
+      <Implementation>CloudWatch Logs with JSON structured format</Implementation>
+      <Retention>90 days hot, archive to S3 for compliance</Retention>
+      <Analytics>OpenSearch for log analytics and search</Analytics>
+    </Logs>
+
+    <Metrics>
+      <Type>metrics</Type>
+      <Implementation>CloudWatch Metrics with custom application metrics</Implementation>
+      <Dashboards>CloudWatch Dashboards for real-time monitoring</Dashboards>
+      <Alarms>CloudWatch Alarms for threshold breaches, SNS notifications</Alarms>
+    </Metrics>
+
+    <Traces>
+      <Type>traces</Type>
+      <Implementation>AWS X-Ray with OTEL instrumentation</Implementation>
+      <Sampling>Adaptive sampling to control costs</Sampling>
+      <Integration>Lambda, API Gateway, Step Functions</Integration>
+    </Traces>
+
+    <AuditLogs>
+      <Type>audit-logs</Type>
+      <Implementation>CloudTrail for API audit, GuardDuty for threat detection</Implementation>
+      <Storage>S3 with MFA delete, Glacier for long-term retention</Storage>
+      <Compliance>MEC alignment, security baseline validation</Compliance>
+    </AuditLogs>
+  </Observability>
+
+  <Security>
+    <IAM>
+      <Principle>Least privilege access</Principle>
+      <Roles>Service-specific IAM roles for Lambda, ECS, Step Functions</Roles>
+      <Policies>Resource-based and identity-based policies</Policies>
+      <SSO>AWS SSO integration for human access</SSO>
+    </IAM>
+
+    <Encryption>
+      <AtRest>KMS for DynamoDB, Aurora, S3, EBS</AtRest>
+      <InTransit>TLS 1.2+ for all API and database connections</InTransit>
+      <KeyManagement>Customer-managed KMS keys with rotation</KeyManagement>
+    </Encryption>
+
+    <Compliance>
+      <MEC>Validate all 32 MEC criteria pre-migration</MEC>
+      <SecurityHub>Enable AWS Security Hub for continuous compliance</SecurityHub>
+      <Config>AWS Config rules for drift detection</Config>
+    </Compliance>
+  </Security>
+
+  <Migration>
+    <Phase name="Pre-Migration">
+      <Task>MEC validation and gap remediation</Task>
+      <Task>Terraform module development and testing</Task>
+      <Task>Python automation scripts for workflows</Task>
+      <Task>Network connectivity setup (VPN/Direct Connect)</Task>
+    </Phase>
+
+    <Phase name="Lift-and-Shift">
+      <Task>Migrate VMs to EC2 using AWS MGN or CloudEndure</Task>
+      <Task>Database migration via AWS DMS to Aurora</Task>
+      <Task>File transfer to S3 with DataSync</Task>
+      <Task>ALB/NLB setup for legacy workloads</Task>
+    </Phase>
+
+    <Phase name="Refactor to Serverless">
+      <Task>Decompose monolith into Lambda functions</Task>
+      <Task>Migrate batch jobs to Step Functions and Glue</Task>
+      <Task>Implement event-driven architecture with EventBridge</Task>
+      <Task>Replace EC2 with Lambda and containerized ECS/Fargate</Task>
+    </Phase>
+
+    <Phase name="Cutover">
+      <Task>DNS switch during maintenance window</Task>
+      <Task>Smoke tests and validation</Task>
+      <Task>Failback plan to on-prem if critical issues</Task>
+    </Phase>
+
+    <Phase name="Post-Migration">
+      <Task>Hypercare monitoring for 2 weeks</Task>
+      <Task>MEC compliance sign-off</Task>
+      <Task>Decommission on-prem infrastructure</Task>
+      <Task>Cost optimization review</Task>
+    </Phase>
+  </Migration>
+
+  <CICD>
+    <IaC>
+      <Tool>Terraform Cloud or AWS CodePipeline</Tool>
+      <Workflow>PR review, plan, apply with approval gates</Workflow>
+      <StateManagement>S3 backend with DynamoDB locking</StateManagement>
+    </IaC>
+
+    <Application>
+      <Tool>AWS CodePipeline + CodeBuild</Tool>
+      <Stages>Source (CodeCommit/GitHub), Build, Test, Deploy</Stages>
+      <Deployment>Lambda versioning with aliases, blue-green for ECS</Deployment>
+    </Application>
+  </CICD>
+
+  <CostOptimization>
+    <Strategy>Serverless-first to minimize idle costs</Strategy>
+    <Tagging>Mandatory cost allocation tags (Environment, Owner, Project)</Tagging>
+    <Budgets>AWS Budgets with alerts at 80% and 100% thresholds</Budgets>
+    <Lifecycle>S3 Intelligent-Tiering, DynamoDB on-demand for variable workloads</Lifecycle>
+    <RightSizing>Lambda memory tuning, Aurora auto-scaling ACU limits</RightSizing>
+  </CostOptimization>
+
+  <DisasterRecovery>
+    <RPO>4 hours</RPO>
+    <RTO>8 hours</RTO>
+    <Strategy>Multi-AZ for Aurora, cross-region S3 replication for critical data</Strategy>
+    <Backup>Automated Aurora snapshots, S3 versioning, Glacier archives</Backup>
+    <Testing>Quarterly DR drills, runbook validation</Testing>
+  </DisasterRecovery>
+
+  <Risks>
+    <Risk>
+      <Description>Schema drift during DMS migration</Description>
+      <Mitigation>Pre-cutover validation, test migrations, rollback plan</Mitigation>
+    </Risk>
+    <Risk>
+      <Description>Performance degradation post-migration</Description>
+      <Mitigation>Load testing, CloudWatch alarms, auto-scaling configuration</Mitigation>
+    </Risk>
+    <Risk>
+      <Description>Cost overruns from unoptimized serverless usage</Description>
+      <Mitigation>Budgets, tagging enforcement, Lambda concurrency limits

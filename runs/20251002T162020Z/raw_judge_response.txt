@@ -1,0 +1,28 @@
+```json
+{
+  "ranking": [
+    {
+      "prompt": "A_schema_compiler",
+      "score": 92,
+      "reasons": "Excellent guardrail alignment, comprehensive CloudMapping with all 5 sections, explicit NFRs with numeric targets, clear IaC mappability, and well-documented risks with mitigations."
+    },
+    {
+      "prompt": "C_catalog_first",
+      "score": 68,
+      "reasons": "Good component catalog and migration phases, but missing mandatory ArchitectureSpec tags (CloudMapping, Constraints, Services), no numeric NFR targets, and incomplete risk section."
+    },
+    {
+      "prompt": "D_diff_to_target",
+      "score": 62,
+      "reasons": "Strong current-to-target state analysis and decision rationale, but missing 6 of 8 mandatory tags, no CloudMapping section, no numeric NFRs, and incomplete Services definition."
+    },
+    {
+      "prompt": "B_critic_refine",
+      "score": 58,
+      "reasons": "Detailed NFRs and business requirements, but critically missing all 8 mandatory ArchitectureSpec tags, no CloudMapping section, incomplete XML structure, and poor IaC mappability."
+    }
+  ],
+  "winner": "A_schema_compiler",
+  "notes": "A_schema_compiler dominates with 100% mandatory tag coverage, explicit CloudMapping for all 5 categories (Compute/Networking/Data/Messaging/Identity), numeric NFR targets (99.9% availability, 500ms p95, 100 rps), and actionable IaC mappings. It correctly addresses the BRD's EC2 lift-and-shift vs. guardrails' serverless-first tension via Strangler Fig pattern in Risks. Other prompts lack critical ArchitectureSpec structure: B missing all 8 tags, C/D missing 6+ tags and CloudMapping sections, making them unsuitable for downstream IaC generation despite some strong narrative content."
+}
+```

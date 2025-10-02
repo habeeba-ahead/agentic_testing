@@ -1,0 +1,290 @@
+```xml
+<architecture_spec>
+  <metadata>
+    <project_name>Application Modernization and Migration to AWS</project_name>
+    <version>1.0</version>
+    <last_updated>2024</last_updated>
+    <architecture_tier>Cloud-Native Serverless</architecture_tier>
+  </metadata>
+
+  <business_requirements>
+    <requirement id="BR-001" priority="critical">
+      <description>Migrate on-premises application to AWS using Infrastructure-as-Code</description>
+      <success_criteria>All infrastructure provisioned via Terraform with modular, reusable code</success_criteria>
+    </requirement>
+    <requirement id="BR-002" priority="critical">
+      <description>Implement application automation and orchestration using Python</description>
+      <success_criteria>Python-based automation operational for workflows, data processing, and orchestration</success_criteria>
+    </requirement>
+    <requirement id="BR-003" priority="critical">
+      <description>Achieve Minimum Entry Criteria (MEC) compliance before and after migration</description>
+      <success_criteria>All MEC validation checks passed including OS versions, patching, backup, DR, monitoring</success_criteria>
+    </requirement>
+    <requirement id="BR-004" priority="high">
+      <description>Establish CI/CD pipelines for infrastructure and application code</description>
+      <success_criteria>Automated deployment pipelines operational for Terraform and Python code</success_criteria>
+    </requirement>
+    <requirement id="BR-005" priority="high">
+      <description>Implement backup, restore, and disaster recovery capabilities</description>
+      <success_criteria>RPO/RTO targets met with documented DR strategy and tested failover procedures</success_criteria>
+    </requirement>
+  </business_requirements>
+
+  <system_context>
+    <description>Modernized cloud-native application on AWS with serverless-first architecture, migrated from on-premises x86 infrastructure</description>
+    <users>
+      <user_type>Internal Business Users</user_type>
+      <user_type>External API Consumers</user_type>
+      <user_type>DevOps Engineers</user_type>
+      <user_type>Data Analysts</user_type>
+    </users>
+    <external_systems>
+      <system>Legacy On-Premises Systems (during migration)</system>
+      <system>External Partner APIs</system>
+      <system>Batch File Transfer Systems</system>
+      <system>Identity Provider (AWS SSO)</system>
+    </external_systems>
+  </system_context>
+
+  <architectural_drivers>
+    <driver type="business">
+      <name>Cloud Migration</name>
+      <description>Complete migration from on-premises to AWS cloud infrastructure</description>
+      <impact>high</impact>
+    </driver>
+    <driver type="technical">
+      <name>Infrastructure-as-Code</name>
+      <description>All infrastructure managed through Terraform for repeatability and version control</description>
+      <impact>high</impact>
+    </driver>
+    <driver type="compliance">
+      <name>MEC Compliance</name>
+      <description>Meet all Minimum Entry Criteria for security, patching, monitoring, and operational readiness</description>
+      <impact>critical</impact>
+    </driver>
+    <driver type="technical">
+      <name>Serverless-First</name>
+      <description>Prioritize serverless services to minimize operational overhead and optimize costs</description>
+      <impact>high</impact>
+    </driver>
+  </architectural_drivers>
+
+  <constraints>
+    <constraint type="technical">
+      <description>Must use Python 3.11 as primary runtime for automation and application logic</description>
+    </constraint>
+    <constraint type="technical">
+      <description>Infrastructure provisioning exclusively through Terraform</description>
+    </constraint>
+    <constraint type="technical">
+      <description>Serverless-first architecture baseline with managed services</description>
+    </constraint>
+    <constraint type="security">
+      <description>Encryption at rest and in transit mandatory for all data</description>
+    </constraint>
+    <constraint type="compliance">
+      <description>All MEC criteria must be validated and remediated before migration</description>
+    </constraint>
+    <constraint type="operational">
+      <description>Cutover during weekend maintenance window with failback capability</description>
+    </constraint>
+  </constraints>
+
+  <architectural_patterns>
+    <pattern>
+      <name>Serverless Event-Driven Architecture</name>
+      <description>EventBridge for async event routing, Lambda for compute, Step Functions for orchestration</description>
+      <rationale>Aligns with serverless-first mandate, reduces operational overhead, enables elastic scaling</rationale>
+    </pattern>
+    <pattern>
+      <name>Infrastructure-as-Code</name>
+      <description>Terraform modules for all AWS resources with state management in S3</description>
+      <rationale>Version control, repeatability, disaster recovery, compliance auditing</rationale>
+    </pattern>
+    <pattern>
+      <name>API Gateway Facade</name>
+      <description>API Gateway as single entry point for REST APIs with Lambda integration</description>
+      <rationale>Centralized authentication, throttling, monitoring, and request validation</rationale>
+    </pattern>
+    <pattern>
+      <name>CQRS with Polyglot Persistence</name>
+      <description>DynamoDB for high-write KV operations, Aurora Serverless v2 for relational queries</description>
+      <rationale>Optimize data stores for specific access patterns and performance requirements</rationale>
+    </pattern>
+    <pattern>
+      <name>Strangler Fig Migration</name>
+      <description>Incremental migration with parallel run capability and gradual traffic shift</description>
+      <rationale>Reduce risk, enable rollback, validate functionality before full cutover</rationale>
+    </pattern>
+  </architectural_patterns>
+
+  <component_model>
+    <component name="API Layer">
+      <type>Managed Service</type>
+      <technology>AWS API Gateway (REST)</technology>
+      <responsibilities>
+        <responsibility>REST API endpoint management</responsibility>
+        <responsibility>Request validation and transformation</responsibility>
+        <responsibility>Authentication and authorization</responsibility>
+        <responsibility>Rate limiting and throttling</responsibility>
+      </responsibilities>
+      <interfaces>
+        <interface type="REST">HTTPS endpoints for external and internal consumers</interface>
+      </interfaces>
+    </component>
+
+    <component name="Application Logic">
+      <type>Serverless Compute</type>
+      <technology>AWS Lambda (Python 3.11)</technology>
+      <responsibilities>
+        <responsibility>Business logic execution</responsibility>
+        <responsibility>Data transformation and validation</responsibility>
+        <responsibility>Integration with downstream services</responsibility>
+        <responsibility>Event processing and handling</responsibility>
+      </responsibilities>
+      <interfaces>
+        <interface type="Event">EventBridge events</interface>
+        <interface type="Sync">API Gateway proxy integration</interface>
+        <interface type="Queue">SQS message processing</interface>
+      </interfaces>
+    </component>
+
+    <component name="Workflow Orchestration">
+      <type>Managed Service</type>
+      <technology>AWS Step Functions</technology>
+      <responsibilities>
+        <responsibility>Complex workflow coordination</responsibility>
+        <responsibility>Long-running process management</responsibility>
+        <responsibility>Error handling and retry logic</responsibility>
+        <responsibility>State management for multi-step processes</responsibility>
+      </responsibilities>
+      <interfaces>
+        <interface type="API">Step Functions API for workflow execution</interface>
+      </interfaces>
+    </component>
+
+    <component name="Event Bus">
+      <type>Managed Service</type>
+      <technology>Amazon EventBridge</technology>
+      <responsibilities>
+        <responsibility>Asynchronous event routing</responsibility>
+        <responsibility>Event filtering and transformation</responsibility>
+        <responsibility>Cross-service integration</responsibility>
+        <responsibility>Event replay and archival</responsibility>
+      </responsibilities>
+      <interfaces>
+        <interface type="Event">Event publishers and subscribers</interface>
+      </interfaces>
+    </component>
+
+    <component name="Work Queue">
+      <type>Managed Service</type>
+      <technology>Amazon SQS</technology>
+      <responsibilities>
+        <responsibility>Asynchronous task queuing</responsibility>
+        <responsibility>Message buffering and decoupling</responsibility>
+        <responsibility>Dead letter queue management</responsibility>
+        <responsibility>Batch processing coordination</responsibility>
+      </responsibilities>
+      <interfaces>
+        <interface type="Queue">Message producers and consumers</interface>
+      </interfaces>
+    </component>
+
+    <component name="Key-Value Store">
+      <type>Managed Database</type>
+      <technology>Amazon DynamoDB</technology>
+      <responsibilities>
+        <responsibility>High-write key-value storage</responsibility>
+        <responsibility>Session state management</responsibility>
+        <responsibility>Real-time data access</responsibility>
+        <responsibility>Point-in-time recovery</responsibility>
+      </responsibilities>
+      <interfaces>
+        <interface type="API">DynamoDB SDK/API</interface>
+        <interface type="Stream">DynamoDB Streams for change data capture</interface>
+      </interfaces>
+    </component>
+
+    <component name="Relational Database">
+      <type>Managed Database</type>
+      <technology>Amazon Aurora Serverless v2 (PostgreSQL)</technology>
+      <responsibilities>
+        <responsibility>Relational data storage</responsibility>
+        <responsibility>Complex query processing</responsibility>
+        <responsibility>ACID transaction support</responsibility>
+        <responsibility>Automated backup and recovery</responsibility>
+      </responsibilities>
+      <interfaces>
+        <interface type="SQL">PostgreSQL protocol</interface>
+      </interfaces>
+    </component>
+
+    <component name="Object Storage">
+      <type>Managed Storage</type>
+      <technology>Amazon S3</technology>
+      <responsibilities>
+        <responsibility>Event and log storage</responsibility>
+        <responsibility>Backup and archive storage</responsibility>
+        <responsibility>Static asset hosting</responsibility>
+        <responsibility>Data lake foundation</responsibility>
+      </responsibilities>
+      <interfaces>
+        <interface type="API">S3 API</interface>
+        <interface type="Event">S3 event notifications</interface>
+      </interfaces>
+    </component>
+
+    <component name="Data Migration Service">
+      <type>Managed Service</type>
+      <technology>AWS Database Migration Service (DMS)</technology>
+      <responsibilities>
+        <responsibility>Database migration from on-premises</responsibility>
+        <responsibility>Continuous data replication</responsibility>
+        <responsibility>Schema conversion support</responsibility>
+        <responsibility>Migration validation</responsibility>
+      </responsibilities>
+      <interfaces>
+        <interface type="Database">Source and target database connections</interface>
+      </interfaces>
+    </component>
+
+    <component name="Secrets Management">
+      <type>Managed Service</type>
+      <technology>AWS Secrets Manager</technology>
+      <responsibilities>
+        <responsibility>Database credential storage</responsibility>
+        <responsibility>API key management</responsibility>
+        <responsibility>Automatic secret rotation</responsibility>
+        <responsibility>Audit logging of secret access</responsibility>
+      </responsibilities>
+      <interfaces>
+        <interface type="API">Secrets Manager API</interface>
+      </interfaces>
+    </component>
+
+    <component name="Encryption Service">
+      <type>Managed Service</type>
+      <technology>AWS Key Management Service (KMS)</technology>
+      <responsibilities>
+        <responsibility>Encryption key management</responsibility>
+        <responsibility>Data encryption at rest</responsibility>
+        <responsibility>Key rotation automation</responsibility>
+        <responsibility>Compliance and audit support</responsibility>
+      </responsibilities>
+      <interfaces>
+        <interface type="API">KMS API for encryption operations</interface>
+      </interfaces>
+    </component>
+
+    <component name="Observability Platform">
+      <type>Managed Service</type>
+      <technology>Amazon CloudWatch with OpenTelemetry</technology>
+      <responsibilities>
+        <responsibility>Centralized logging with structured logs</responsibility>
+        <responsibility>Metrics collection and dashboards</responsibility>
+        <responsibility>Distributed tracing</responsibility>
+        <responsibility>Alarms and notifications</responsibility>
+      </responsibilities>
+      <interfaces>
+        <interface type="API">CloudWatch Logs and Metrics APIs

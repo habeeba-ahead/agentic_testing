@@ -3,6 +3,7 @@ from datetime import datetime
 from anthropic import Anthropic
 from validate_xml import validate_xml
 import httpx
+from dotenv import load_dotenv 
 
 # --- setup paths ---
 ROOT = pathlib.Path(__file__).resolve().parent
@@ -16,6 +17,7 @@ MODEL = "claude-sonnet-4-5-20250929"
 MAX_TOKENS = 3000
 TEMPERATURE = 0
 SYSTEM_PROMPT = "Output XML only. No prose."
+load_dotenv()
 
 # --- output dir ---
 STAMP = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")

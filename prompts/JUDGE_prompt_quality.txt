@@ -1,0 +1,38 @@
+You are judging WHICH PROMPT produced the best ArchitectureSpec XML for downstream Infra-as-Code (IaC) generation.
+
+Return STRICT JSON only with this schema:
+{
+  "ranking": [
+    {"prompt": "<prompt_stem>", "score": <0-100 integer>, "reasons": "<one-line>"},
+    ...
+  ],
+  "winner": "<prompt_stem>",
+  "notes": "<short global notes>"
+}
+
+EVALUATION RUBRIC (weights in parentheses):
+1) Guardrail Alignment (x3) — matches guardrails.md; any deviation is captured in <Risks>/<Constraints>.
+2) IaC Mappability (x4) — <CloudMapping> is explicit and provisionable; <Decisions>/<Patterns> imply straightforward IaC.
+3) Completeness (x2) — all mandatory sections filled; NonFunctionals have numeric targets.
+4) Risk & Constraint Clarity (x2) — concrete migration/data risks with mitigations; constraints actionable by infra.
+5) Consistency (x1) — no contradictions (e.g., “serverless-first” but maps to k8s without justification).
+
+Inputs also include AUTO METRICS computed outside the LLM. Use them as hints, but base your reasoning primarily on the XML content.
+
+STRICT FORMAT Inputs:
+[BRD]
+{{BRD_TEXT}}
+
+[GUARDRAILS]
+{{GUARDRAILS_TEXT}}
+
+[CANDIDATES]
+For each item:
+---BEGIN---
+prompt: {{PROMPT_STEM}}
+auto_metrics_json: {{AUTO_JSON}}
+xml:
+{{XML}}
+---END---
+
+Output JSON only. No Markdown, no comments.

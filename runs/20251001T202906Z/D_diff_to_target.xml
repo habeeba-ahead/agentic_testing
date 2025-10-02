@@ -1,0 +1,176 @@
+```xml
+<ArchitectureSpec>
+  <Metadata>
+    <ProjectName>Application Modernization to AWS Serverless</ProjectName>
+    <Version>1.0</Version>
+    <LastUpdated>2024-01-20</LastUpdated>
+    <Architect>Cloud Migration Team</Architect>
+    <Status>Target State Design</Status>
+  </Metadata>
+
+  <ExecutiveSummary>
+    Modernization from on-premises x86 architecture to AWS serverless-first platform using Python 3.11, Terraform IaC, and managed services. Migration transforms legacy compute/database workloads into event-driven, auto-scaling serverless components while maintaining MEC compliance for security, observability, and cost efficiency.
+  </ExecutiveSummary>
+
+  <BusinessContext>
+    <Driver id="D1">Eliminate infrastructure management overhead and reduce operational costs through serverless adoption</Driver>
+    <Driver id="D2">Achieve elastic scalability and high availability via AWS managed services</Driver>
+    <Driver id="D3">Enforce security and compliance through IAM, encryption, and audit controls per MEC requirements</Driver>
+    <Driver id="D4">Enable rapid feature delivery via CI/CD pipelines for Terraform and Python automation</Driver>
+    <Driver id="D5">Establish cloud-native observability with structured logging and distributed tracing</Driver>
+    <Constraint id="C1">Must maintain RPO/RTO requirements during migration cutover</Constraint>
+    <Constraint id="C2">All infrastructure provisioned via Terraform; no manual console changes</Constraint>
+    <Constraint id="C3">Python 3.11 runtime standard across all compute components</Constraint>
+    <Constraint id="C4">Serverless-first architecture to minimize idle costs</Constraint>
+    <Constraint id="C5">MEC compliance validation required pre-migration and post-cutover</Constraint>
+  </BusinessContext>
+
+  <CurrentState>
+    <Architecture>
+      <Component name="Compute">On-premises x86 servers running legacy OS with limited automation</Component>
+      <Component name="Database">SQL-based relational databases on dedicated hardware</Component>
+      <Component name="Storage">Local disk storage with manual backup processes</Component>
+      <Component name="Networking">Internal network with limited external API exposure</Component>
+      <Component name="Integration">Mix of internal APIs and batch file transfers</Component>
+      <Component name="Monitoring">Limited observability tooling; manual log aggregation</Component>
+      <Component name="Security">Perimeter-based security; vendor-specific licensing</Component>
+    </Architecture>
+    <Limitations>
+      <Limitation>Manual scaling and capacity planning leading to over-provisioning</Limitation>
+      <Limitation>Lack of automated disaster recovery and backup validation</Limitation>
+      <Limitation>Insufficient observability for performance troubleshooting</Limitation>
+      <Limitation>Tight coupling between application layers limiting agility</Limitation>
+      <Limitation>Legacy OS and database versions approaching end-of-support</Limitation>
+      <Limitation>No infrastructure-as-code; configuration drift across environments</Limitation>
+    </Limitations>
+    <TechnicalDebt>
+      <Item>Monolithic application architecture requiring refactoring for cloud-native patterns</Item>
+      <Item>Batch processing workflows not optimized for event-driven execution</Item>
+      <Item>Database schema may require normalization for serverless access patterns</Item>
+      <Item>Hard-coded configuration and secrets embedded in application code</Item>
+    </TechnicalDebt>
+  </CurrentState>
+
+  <TargetState>
+    <Architecture>
+      <Layer name="Presentation">
+        <Component>API Gateway REST APIs with request validation and throttling</Component>
+        <Component>CloudFront distribution for static content delivery</Component>
+        <Component>WAF rules for API protection and rate limiting</Component>
+      </Layer>
+      <Layer name="Application">
+        <Component>Lambda functions (Python 3.11) for business logic execution</Component>
+        <Component>Step Functions for workflow orchestration and long-running processes</Component>
+        <Component>EventBridge for event routing and async integration</Component>
+        <Component>SQS queues for reliable work distribution and decoupling</Component>
+      </Layer>
+      <Layer name="Data">
+        <Component>DynamoDB tables for high-write key-value workloads with on-demand scaling</Component>
+        <Component>Aurora Serverless v2 (PostgreSQL) for relational data with auto-scaling ACUs</Component>
+        <Component>S3 buckets for event logs, file storage, and data lake with lifecycle policies</Component>
+        <Component>S3 Glacier for long-term backup retention</Component>
+      </Layer>
+      <Layer name="Integration">
+        <Component>EventBridge event bus for cross-service async communication</Component>
+        <Component>SQS FIFO queues for ordered message processing</Component>
+        <Component>API Gateway for synchronous REST endpoints</Component>
+        <Component>AWS DMS for database migration from legacy SQL systems</Component>
+      </Layer>
+      <Layer name="Security">
+        <Component>IAM roles with least-privilege policies for all services</Component>
+        <Component>Secrets Manager for credentials and API keys rotation</Component>
+        <Component>KMS customer-managed keys for encryption at rest</Component>
+        <Component>VPC endpoints for private AWS service access</Component>
+        <Component>Security Hub for continuous compliance monitoring</Component>
+        <Component>GuardDuty for threat detection</Component>
+      </Layer>
+      <Layer name="Observability">
+        <Component>CloudWatch Logs with structured JSON logging from all Lambda functions</Component>
+        <Component>CloudWatch Metrics for custom business and technical KPIs</Component>
+        <Component>X-Ray tracing with OTEL instrumentation for distributed traces</Component>
+        <Component>CloudWatch Alarms for proactive alerting on SLA breaches</Component>
+        <Component>CloudWatch Dashboards for operational visibility</Component>
+      </Layer>
+      <Layer name="Infrastructure">
+        <Component>Terraform modules for all AWS resource provisioning</Component>
+        <Component>VPC with private subnets for Aurora and Lambda execution</Component>
+        <Component>NAT Gateway for outbound internet access from private subnets</Component>
+        <Component>Route 53 for DNS management and health checks</Component>
+      </Layer>
+    </Architecture>
+    <Principles>
+      <Principle>Serverless-first: prefer managed services over self-managed compute</Principle>
+      <Principle>Event-driven: decouple components via asynchronous messaging</Principle>
+      <Principle>Infrastructure-as-code: all resources defined in Terraform with version control</Principle>
+      <Principle>Security by design: encryption, least privilege, and audit logging by default</Principle>
+      <Principle>Observability-native: structured logs, metrics, and traces from inception</Principle>
+      <Principle>Cost-optimized: pay-per-use pricing with auto-scaling and lifecycle management</Principle>
+      <Principle>Immutable deployments: no in-place updates; replace via CI/CD pipelines</Principle>
+    </Principles>
+  </TargetState>
+
+  <Decisions>
+    <Decision id="DEC-001">
+      <Title>Adopt Lambda for compute over EC2/ECS</Title>
+      <Status>Approved</Status>
+      <Rationale>Serverless-first guardrail mandates Lambda for stateless workloads. Eliminates server management, provides automatic scaling, and reduces idle costs. Python 3.11 runtime aligns with guardrail requirements.</Rationale>
+      <Implications>Requires refactoring monolithic application into function-based architecture. Cold start latency must be monitored and mitigated with provisioned concurrency if needed.</Implications>
+      <Alternatives>
+        <Alternative rejected="true">ECS Fargate: Higher operational overhead and cost for idle capacity</Alternative>
+        <Alternative rejected="true">EC2 lift-and-shift: Does not meet serverless-first guardrail</Alternative>
+      </Alternatives>
+    </Decision>
+    <Decision id="DEC-002">
+      <Title>Use DynamoDB for high-write key-value workloads</Title>
+      <Status>Approved</Status>
+      <Rationale>Guardrail specifies DynamoDB for high-write KV patterns. Provides single-digit millisecond latency, on-demand scaling, and native AWS integration. Supports event streaming via DynamoDB Streams.</Rationale>
+      <Implications>Requires data model transformation from relational to NoSQL access patterns. Application logic must handle eventual consistency. DynamoDB Streams enable event-driven workflows.</Implications>
+      <Alternatives>
+        <Alternative rejected="true">Aurora for all data: Over-provisioned for simple KV access patterns</Alternative>
+      </Alternatives>
+    </Decision>
+    <Decision id="DEC-003">
+      <Title>Aurora Serverless v2 for relational workloads</Title>
+      <Status>Approved</Status>
+      <Rationale>Guardrail mandates Aurora Serverless v2 for relational data. Auto-scales ACUs based on load, reducing costs during low-traffic periods. PostgreSQL compatibility eases migration from legacy SQL databases.</Rationale>
+      <Implications>Minimum ACU capacity incurs baseline cost. Connection pooling via RDS Proxy required for Lambda integration. Schema migration via AWS DMS with validation testing.</Implications>
+      <Alternatives>
+        <Alternative rejected="true">RDS provisioned instances: Fixed capacity does not align with serverless-first principle</Alternative>
+      </Alternatives>
+    </Decision>
+    <Decision id="DEC-004">
+      <Title>EventBridge for async event routing</Title>
+      <Status>Approved</Status>
+      <Rationale>Guardrail specifies EventBridge for async messaging. Enables loose coupling between services, supports event filtering and transformation, and integrates natively with AWS services.</Rationale>
+      <Implications>Application must adopt event-driven patterns. Event schema registry recommended for contract management. Retry and DLQ strategies required for fault tolerance.</Implications>
+      <Alternatives>
+        <Alternative rejected="true">SNS: Less flexible routing and filtering capabilities</Alternative>
+      </Alternatives>
+    </Decision>
+    <Decision id="DEC-005">
+      <Title>SQS for work queue processing</Title>
+      <Status>Approved</Status>
+      <Rationale>Guardrail mandates SQS for work queues. Provides reliable message delivery, automatic scaling with Lambda, and visibility timeout for long-running tasks. FIFO queues support ordered processing.</Rationale>
+      <Implications>Lambda polling introduces slight latency vs push-based EventBridge. DLQ configuration required for poison message handling. Message retention and visibility timeout tuning needed.</Implications>
+      <Alternatives>
+        <Alternative rejected="true">Kinesis: Over-engineered for simple queue patterns; higher cost</Alternative>
+      </Alternatives>
+    </Decision>
+    <Decision id="DEC-006">
+      <Title>API Gateway for REST APIs</Title>
+      <Status>Approved</Status>
+      <Rationale>Guardrail specifies API Gateway for REST endpoints. Provides request validation, throttling, caching, and native Lambda integration. Supports OpenAPI specification for API documentation.</Rationale>
+      <Implications>API Gateway pricing based on request count. Caching and throttling policies must be configured per endpoint. Custom domain names require ACM certificates.</Implications>
+      <Alternatives>
+        <Alternative rejected="true">ALB with Lambda targets: Less feature-rich for API management</Alternative>
+      </Alternatives>
+    </Decision>
+    <Decision id="DEC-007">
+      <Title>Terraform for infrastructure provisioning</Title>
+      <Status>Approved</Status>
+      <Rationale>BRD mandates Terraform for IaC. Provides declarative infrastructure definition, state management, and multi-environment support. Modular design enables reusability across projects.</Rationale>
+      <Implications>Terraform state stored in S3 with DynamoDB locking. CI/CD pipeline required for automated plan/apply. Module versioning and testing strategy needed.</Implications>
+      <Alternatives>
+        <Alternative rejected="true">CloudFormation: Vendor lock-in; less flexible than Terraform</Alternative>
+      </Alternatives>
+    </Decision>

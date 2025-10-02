@@ -1,0 +1,217 @@
+```xml
+<architecture_spec>
+  <metadata>
+    <project_name>Application Modernization and Migration to AWS</project_name>
+    <version>1.0</version>
+    <last_updated>2024</last_updated>
+    <architecture_tier>Cloud-Native Serverless</architecture_tier>
+  </metadata>
+
+  <business_requirements>
+    <requirement id="BR-001" priority="critical">
+      <description>Migrate on-premises application to AWS using Infrastructure-as-Code</description>
+      <success_criteria>All infrastructure provisioned via Terraform with modular, reusable code</success_criteria>
+    </requirement>
+    <requirement id="BR-002" priority="critical">
+      <description>Implement application automation and orchestration using Python</description>
+      <success_criteria>Python-based automation operational for workflows, data processing, and orchestration</success_criteria>
+    </requirement>
+    <requirement id="BR-003" priority="critical">
+      <description>Achieve Minimum Entry Criteria (MEC) compliance before and after migration</description>
+      <success_criteria>All MEC validation checks passed including OS versions, patching, backup, DR, monitoring</success_criteria>
+    </requirement>
+    <requirement id="BR-004" priority="high">
+      <description>Establish CI/CD pipelines for infrastructure and application code</description>
+      <success_criteria>Automated deployment pipelines operational for Terraform and Python code</success_criteria>
+    </requirement>
+    <requirement id="BR-005" priority="high">
+      <description>Implement backup, restore, and disaster recovery capabilities</description>
+      <success_criteria>RPO/RTO targets met with documented DR strategy and tested failover procedures</success_criteria>
+    </requirement>
+  </business_requirements>
+
+  <system_context>
+    <description>Modernized cloud-native application on AWS with serverless-first architecture, migrated from on-premises x86 infrastructure</description>
+    <users>
+      <user_type>Internal Business Users</user_type>
+      <user_type>External API Consumers</user_type>
+      <user_type>DevOps Engineers</user_type>
+      <user_type>Data Analysts</user_type>
+    </users>
+    <external_systems>
+      <system>Legacy On-Premises Systems (during migration)</system>
+      <system>External Partner APIs</system>
+      <system>Batch File Transfer Systems</system>
+      <system>Identity Provider (AWS SSO)</system>
+    </external_systems>
+  </system_context>
+
+  <architectural_drivers>
+    <driver type="business">
+      <name>Cloud Migration</name>
+      <description>Complete migration from on-premises to AWS cloud infrastructure</description>
+      <impact>high</impact>
+    </driver>
+    <driver type="technical">
+      <name>Infrastructure-as-Code</name>
+      <description>All infrastructure managed through Terraform for repeatability and version control</description>
+      <impact>high</impact>
+    </driver>
+    <driver type="compliance">
+      <name>MEC Compliance</name>
+      <description>Meet all Minimum Entry Criteria for security, patching, monitoring, and operational readiness</description>
+      <impact>critical</impact>
+    </driver>
+    <driver type="technical">
+      <name>Serverless-First</name>
+      <description>Prioritize serverless services to minimize operational overhead and optimize costs</description>
+      <impact>high</impact>
+    </driver>
+  </architectural_drivers>
+
+  <constraints>
+    <constraint type="technical">
+      <description>Must use Python 3.11 for all application code and automation</description>
+    </constraint>
+    <constraint type="technical">
+      <description>Infrastructure provisioning exclusively via Terraform</description>
+    </constraint>
+    <constraint type="technical">
+      <description>Serverless-first architecture baseline with managed services</description>
+    </constraint>
+    <constraint type="business">
+      <description>Migration must support weekend cutover window with failback capability</description>
+    </constraint>
+    <constraint type="compliance">
+      <description>Data encryption at rest and in transit mandatory for sensitive workloads</description>
+    </constraint>
+  </constraints>
+
+  <non_functional_requirements>
+    <nfr id="NFR-001" category="security">
+      <requirement>IAM least privilege access with role-based permissions</requirement>
+      <metric>Zero overly permissive IAM policies; all access via IAM roles</metric>
+      <priority>critical</priority>
+    </nfr>
+    <nfr id="NFR-002" category="security">
+      <requirement>Encryption at rest using KMS and in transit using TLS 1.2+</requirement>
+      <metric>100% of data encrypted; all API endpoints HTTPS only</metric>
+      <priority>critical</priority>
+    </nfr>
+    <nfr id="NFR-003" category="security">
+      <requirement>Secrets management via AWS Secrets Manager</requirement>
+      <metric>Zero hardcoded credentials; automatic rotation enabled</metric>
+      <priority>critical</priority>
+    </nfr>
+    <nfr id="NFR-004" category="performance">
+      <requirement>API response time meets or exceeds baseline latency</requirement>
+      <metric>P95 latency ≤ baseline + 10%; P99 latency ≤ baseline + 20%</metric>
+      <priority>high</priority>
+    </nfr>
+    <nfr id="NFR-005" category="scalability">
+      <requirement>Automatic scaling based on demand with no manual intervention</requirement>
+      <metric>Handle 10x baseline load without degradation; scale-out time &lt; 2 minutes</metric>
+      <priority>high</priority>
+    </nfr>
+    <nfr id="NFR-006" category="reliability">
+      <requirement>High availability across multiple Availability Zones</requirement>
+      <metric>99.9% uptime SLA; multi-AZ deployment for all critical components</metric>
+      <priority>critical</priority>
+    </nfr>
+    <nfr id="NFR-007" category="reliability">
+      <requirement>Disaster recovery with documented RPO and RTO</requirement>
+      <metric>RPO ≤ 1 hour; RTO ≤ 4 hours; quarterly DR testing</metric>
+      <priority>high</priority>
+    </nfr>
+    <nfr id="NFR-008" category="observability">
+      <requirement>Comprehensive monitoring with CloudWatch and OpenTelemetry</requirement>
+      <metric>Structured logs for all services; distributed tracing enabled; custom metrics for business KPIs</metric>
+      <priority>high</priority>
+    </nfr>
+    <nfr id="NFR-009" category="observability">
+      <requirement>Audit trail via CloudTrail and GuardDuty</requirement>
+      <metric>100% API calls logged; real-time threat detection enabled</metric>
+      <priority>critical</priority>
+    </nfr>
+    <nfr id="NFR-010" category="cost">
+      <requirement>Cost optimization through right-sizing and lifecycle management</requirement>
+      <metric>Monthly cost within budget; S3 lifecycle rules active; idle resource costs capped</metric>
+      <priority>high</priority>
+    </nfr>
+    <nfr id="NFR-011" category="maintainability">
+      <requirement>Infrastructure code modular and reusable</requirement>
+      <metric>Terraform modules with &lt; 500 LOC; 80%+ code reuse across environments</metric>
+      <priority>medium</priority>
+    </nfr>
+    <nfr id="NFR-012" category="compliance">
+      <requirement>MEC compliance validation automated</requirement>
+      <metric>Automated compliance checks in CI/CD; monthly compliance reports</metric>
+      <priority>critical</priority>
+    </nfr>
+  </non_functional_requirements>
+
+  <architectural_decisions>
+    <decision id="AD-001">
+      <title>Serverless-First Architecture</title>
+      <status>accepted</status>
+      <context>Need to minimize operational overhead while optimizing costs and scalability</context>
+      <decision>Adopt serverless-first approach using Lambda, API Gateway, DynamoDB, Aurora Serverless v2, EventBridge, SQS, and Step Functions</decision>
+      <rationale>Serverless services provide automatic scaling, pay-per-use pricing, built-in HA, and reduced operational burden aligned with guardrails</rationale>
+      <consequences>
+        <positive>Reduced operational overhead, automatic scaling, cost efficiency, faster time-to-market</positive>
+        <negative>Cold start latency for Lambda, vendor lock-in, learning curve for serverless patterns</negative>
+      </consequences>
+    </decision>
+    <decision id="AD-002">
+      <title>Terraform for Infrastructure-as-Code</title>
+      <status>accepted</status>
+      <context>Requirement for repeatable, version-controlled infrastructure provisioning</context>
+      <decision>Use Terraform as exclusive IaC tool with modular design and remote state in S3</decision>
+      <rationale>Terraform provides declarative syntax, AWS provider maturity, state management, and team familiarity</rationale>
+      <consequences>
+        <positive>Version control, repeatability, multi-environment support, disaster recovery capability</positive>
+        <negative>State management complexity, potential for drift, requires Terraform expertise</negative>
+      </consequences>
+    </decision>
+    <decision id="AD-003">
+      <title>Python 3.11 for Application and Automation</title>
+      <status>accepted</status>
+      <context>Need standardized runtime for Lambda functions, automation scripts, and data processing</context>
+      <decision>Standardize on Python 3.11 for all application code, Lambda functions, and automation workflows</decision>
+      <rationale>Python 3.11 offers performance improvements, native AWS SDK support, rich ecosystem, and team expertise</rationale>
+      <consequences>
+        <positive>Consistent runtime, strong AWS integration, extensive libraries, team productivity</positive>
+        <negative>Runtime version management, potential compatibility issues with legacy code</negative>
+      </consequences>
+    </decision>
+    <decision id="AD-004">
+      <title>DynamoDB for High-Write Key-Value Workloads</title>
+      <status>accepted</status>
+      <context>Application requires high-throughput key-value storage with low latency</context>
+      <decision>Use DynamoDB with on-demand capacity for high-write workloads and session data</decision>
+      <rationale>DynamoDB provides single-digit millisecond latency, automatic scaling, and serverless operation</rationale>
+      <consequences>
+        <positive>High performance, automatic scaling, no server management, built-in backup</positive>
+        <negative>Query limitations, cost at high scale, data modeling complexity</negative>
+      </consequences>
+    </decision>
+    <decision id="AD-005">
+      <title>Aurora Serverless v2 for Relational Data</title>
+      <status>accepted</status>
+      <context>Application requires relational database with SQL support and automatic scaling</context>
+      <decision>Migrate SQL databases to Aurora Serverless v2 with multi-AZ deployment</decision>
+      <rationale>Aurora Serverless v2 provides instant scaling, MySQL/PostgreSQL compatibility, and serverless economics</rationale>
+      <consequences>
+        <positive>Automatic scaling, high availability, cost efficiency, SQL compatibility</positive>
+        <negative>Cold start delays, minimum capacity costs, migration complexity</negative>
+      </consequences>
+    </decision>
+    <decision id="AD-006">
+      <title>EventBridge for Event-Driven Architecture</title>
+      <status>accepted</status>
+      <context>Need decoupled, asynchronous communication between services</context>
+      <decision>Use EventBridge as central event bus for async workflows and service integration</decision>
+      <rationale>EventBridge provides schema registry, filtering, routing, and native AWS service integration</rationale>
+      <consequences>
+        <positive>Loose coupling, scalability, event replay, third-party integration</positive>
+        <negative>Eventual consistency, debugging

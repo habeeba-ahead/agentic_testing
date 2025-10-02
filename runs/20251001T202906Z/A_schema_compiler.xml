@@ -1,0 +1,148 @@
+```xml
+<ArchitectureSpec version="1.0">
+  <Context>
+    <AppName>Legacy Application Modernization Platform</AppName>
+    <BusinessCapabilities>Application Migration, Infrastructure Provisioning, Data Replication, Monitoring and Observability, Backup and Recovery, Compliance Validation</BusinessCapabilities>
+    <Criticality>high</Criticality>
+  </Context>
+
+  <Decisions>
+    <DomainStyle>modular monolith</DomainStyle>
+    <IntegrationStyle>event-driven</IntegrationStyle>
+    <Runtime>python</Runtime>
+    <DataTier>aurora-serverless-v2, dynamodb, s3</DataTier>
+    <InfraBaseline>serverless</InfraBaseline>
+  </Decisions>
+
+  <Patterns>
+    <Pattern name="Event-Driven Architecture" rationale="Decouple migration workflows, automation tasks, and monitoring events using EventBridge for async orchestration"/>
+    <Pattern name="CQRS" rationale="Separate read-heavy monitoring queries (DynamoDB) from transactional migration metadata (Aurora) to optimize performance"/>
+    <Pattern name="Strangler Fig" rationale="Incrementally migrate from lift-and-shift EC2 to serverless, allowing phased modernization"/>
+    <Pattern name="Saga Pattern" rationale="Coordinate multi-step migration workflows (provision, migrate, validate) with compensating transactions via Step Functions"/>
+    <Pattern name="Circuit Breaker" rationale="Protect external dependencies (on-prem systems, AWS DMS) from cascading failures during cutover"/>
+    <Pattern name="Outbox Pattern" rationale="Ensure reliable event publishing from Aurora to EventBridge for migration state changes"/>
+  </Patterns>
+
+  <NonFunctionals>
+    <Availability target="99.9%"/>
+    <Latency p95_ms="500"/>
+    <Throughput rps="100"/>
+    <Security notes="IAM least privilege, KMS encryption at rest, TLS 1.2+ in transit, Secrets Manager for credentials, MEC compliance validation, GuardDuty and Security Hub enabled"/>
+    <Compliance notes="MEC alignment mandatory pre-migration, CloudTrail audit logging, data classification enforcement, backup retention per policy"/>
+    <Observability notes="CloudWatch Logs with structured JSON, OTEL tracing for distributed workflows, X-Ray for Lambda/Step Functions, custom metrics for migration progress, OpenSearch for log analytics"/>
+    <CostGuardrails notes="Serverless-first to minimize idle costs, DynamoDB on-demand for variable workloads, Aurora Serverless v2 auto-scaling, S3 Intelligent-Tiering and Glacier for backups, budget alerts and tagging enforcement"/>
+  </NonFunctionals>
+
+  <Services>
+    <Service name="MigrationOrchestrator" domain="migration">
+      <APIs>
+        <API name="StartMigration" protocol="REST" auth="IAM" sync_or_async="async"/>
+        <API name="GetMigrationStatus" protocol="REST" auth="IAM" sync_or_async="sync"/>
+        <API name="RollbackMigration" protocol="REST" auth="IAM" sync_or_async="async"/>
+      </APIs>
+      <DataStores>
+        <Store type="aurora-serverless-v2" purpose="Migration metadata, workflow state, dependency graph"/>
+        <Store type="s3" purpose="Terraform state files, migration logs, backup artifacts"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="topic" name="MigrationEvents" purpose="Publish migration lifecycle events"/>
+        <Channel type="queue" name="MigrationTasks" purpose="Decouple long-running migration steps"/>
+      </QueuesTopics>
+    </Service>
+    <Service name="InfraProvisioner" domain="infrastructure">
+      <APIs>
+        <API name="ProvisionInfra" protocol="REST" auth="IAM" sync_or_async="async"/>
+        <API name="ValidateTerraform" protocol="REST" auth="IAM" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="s3" purpose="Terraform modules, state backend, plan outputs"/>
+        <Store type="dynamodb" purpose="Terraform lock table, provisioning job status"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="queue" name="ProvisioningQueue" purpose="Queue Terraform apply jobs"/>
+        <Channel type="topic" name="InfraEvents" purpose="Notify on provisioning completion or failure"/>
+      </QueuesTopics>
+    </Service>
+    <Service name="DataMigrator" domain="data">
+      <APIs>
+        <API name="InitiateDataSync" protocol="REST" auth="IAM" sync_or_async="async"/>
+        <API name="ValidateDataIntegrity" protocol="REST" auth="IAM" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="aurora-serverless-v2" purpose="Target relational database for migrated SQL data"/>
+        <Store type="s3" purpose="Staging area for batch data transfers, DMS replication logs"/>
+        <Store type="dynamodb" purpose="Data validation checksums, replication progress tracking"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="queue" name="DataSyncQueue" purpose="Queue data replication tasks"/>
+        <Channel type="topic" name="DataEvents" purpose="Publish data sync completion and validation results"/>
+      </QueuesTopics>
+    </Service>
+    <Service name="ComplianceValidator" domain="compliance">
+      <APIs>
+        <API name="ValidateMEC" protocol="REST" auth="IAM" sync_or_async="sync"/>
+        <API name="GenerateComplianceReport" protocol="REST" auth="IAM" sync_or_async="async"/>
+      </APIs>
+      <DataStores>
+        <Store type="dynamodb" purpose="MEC checklist results, compliance scan history"/>
+        <Store type="s3" purpose="Compliance reports, audit evidence"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="topic" name="ComplianceEvents" purpose="Alert on MEC violations or compliance drift"/>
+      </QueuesTopics>
+    </Service>
+    <Service name="ObservabilityHub" domain="monitoring">
+      <APIs>
+        <API name="QueryMetrics" protocol="REST" auth="IAM" sync_or_async="sync"/>
+        <API name="CreateAlert" protocol="REST" auth="IAM" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="s3" purpose="Long-term log storage, CloudWatch Logs export"/>
+        <Store type="dynamodb" purpose="Custom metrics aggregation, alert configuration"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="topic" name="AlertEvents" purpose="Publish monitoring alerts and anomalies"/>
+      </QueuesTopics>
+    </Service>
+    <Service name="BackupRecovery" domain="resilience">
+      <APIs>
+        <API name="CreateBackup" protocol="REST" auth="IAM" sync_or_async="async"/>
+        <API name="RestoreFromBackup" protocol="REST" auth="IAM" sync_or_async="async"/>
+      </APIs>
+      <DataStores>
+        <Store type="s3" purpose="Backup snapshots, Glacier archival for long-term retention"/>
+        <Store type="dynamodb" purpose="Backup catalog, RPO/RTO tracking"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="queue" name="BackupQueue" purpose="Schedule and execute backup jobs"/>
+        <Channel type="topic" name="BackupEvents" purpose="Notify on backup success or failure"/>
+      </QueuesTopics>
+    </Service>
+  </Services>
+
+  <Constraints>
+    <Must>All infrastructure must be provisioned via Terraform with modular reusable code. All application automation must use Python 3.11. Encryption at rest (KMS) and in transit (TLS 1.2+) is mandatory. MEC compliance must be validated before migration. Multi-AZ deployment for high availability. CloudTrail and GuardDuty must be enabled. IAM roles must follow least privilege principle.</Must>
+    <Should>Prefer serverless services to minimize operational overhead. Use DynamoDB on-demand for variable workloads. Implement auto-scaling for Aurora Serverless v2. Apply S3 lifecycle policies for cost optimization. Use structured JSON logging with correlation IDs. Implement CI/CD pipelines for Terraform and Python code. Tag all resources for cost allocation.</Should>
+    <MustNot>Store secrets in code or environment variables (use Secrets Manager). Deploy without MEC validation. Use deprecated OS or database versions. Bypass IAM authentication. Disable CloudTrail logging. Provision resources outside Terraform (no manual console changes).</MustNot>
+  </Constraints>
+
+  <CloudMapping provider="AWS">
+    <Compute>Lambda (Python 3.11 runtime) for automation and orchestration, Step Functions for workflow coordination, Fargate for containerized workloads if needed post-modernization</Compute>
+    <Networking>VPC with private and public subnets, API Gateway for REST APIs, Application Load Balancer for future EC2/ECS workloads, VPC endpoints for S3 and DynamoDB, Transit Gateway for hybrid connectivity during migration</Networking>
+    <Data>Aurora Serverless v2 (PostgreSQL) for relational data, DynamoDB (on-demand) for high-write key-value workloads, S3 with Intelligent-Tiering and Glacier for backups and logs, AWS DMS for database migration</Data>
+    <Messaging>EventBridge for event routing and async integration, SQS (standard queues) for work queue decoupling, SNS for fan-out notifications</Messaging>
+    <Identity>IAM roles and policies, AWS SSO for user access, Secrets Manager for credential management, KMS for encryption key management, Security Hub for compliance posture, GuardDuty for threat detection</Identity>
+  </CloudMapping>
+
+  <Risks>
+    <Risk item="BRD mentions EC2 lift-and-shift but guardrails mandate serverless-first" mitigation="Adopt Strangler Fig pattern: initial lift-and-shift to EC2 with parallel serverless development, then phase out EC2 workloads incrementally"/>
+    <Risk item="BRD references ECS/EKS for containers but guardrails specify serverless baseline" mitigation="Use Fargate (serverless container runtime) if containerization is required, avoid self-managed EKS clusters"/>
+    <Risk item="Schema drift during DMS migration may cause data integrity issues" mitigation="Implement pre-cutover validation with DataMigrator service, use DMS validation features, maintain rollback capability"/>
+    <Risk item="Performance degradation during cutover window" mitigation="Enable Aurora auto-scaling, DynamoDB on-demand mode, implement circuit breakers, conduct load testing pre-cutover"/>
+    <Risk item="Cost overruns from unoptimized serverless usage" mitigation="Apply budget alerts, enforce tagging, use S3 lifecycle policies, monitor Lambda concurrency and duration, right-size Aurora capacity units"/>
+    <Risk item="Incomplete MEC compliance data from discovery" mitigation="ComplianceValidator service performs automated MEC checks, block migration if critical gaps exist, document exceptions with risk acceptance"/>
+    <Risk item="Dependency on on-prem systems during hybrid phase" mitigation="Use Transit Gateway or VPN for secure connectivity, implement circuit breakers for on-prem calls, plan for eventual decoupling"/>
+    <Risk item="Lack of specific application name and business area details" mitigation="Treat as template architecture, customize per application during implementation, maintain flexibility in service boundaries"/>
+  </Risks>
+</ArchitectureSpec>
+```
