@@ -1,0 +1,205 @@
+```xml
+<ArchitectureSpec>
+  <Metadata>
+    <ProjectName>Application Modernization to AWS Serverless</ProjectName>
+    <Version>1.0</Version>
+    <LastUpdated>2024-01-20</LastUpdated>
+    <Architect>Cloud Migration Team</Architect>
+    <Status>Target State Design</Status>
+  </Metadata>
+
+  <ExecutiveSummary>
+    Modernization from on-premises x86 architecture to AWS serverless-first platform using Python 3.11, Terraform IaC, and managed services. Migration transforms legacy compute/database workloads into event-driven, auto-scaling serverless components while maintaining MEC compliance for security, observability, and cost efficiency.
+  </ExecutiveSummary>
+
+  <BusinessContext>
+    <Driver id="BD-1">Eliminate infrastructure management overhead via serverless compute</Driver>
+    <Driver id="BD-2">Achieve elastic scalability with pay-per-use cost model</Driver>
+    <Driver id="BD-3">Meet MEC compliance for encryption, IAM, monitoring, and DR</Driver>
+    <Driver id="BD-4">Enable rapid deployment via Terraform IaC and CI/CD pipelines</Driver>
+    <Driver id="BD-5">Improve observability with CloudWatch and OpenTelemetry tracing</Driver>
+    <Constraint id="BC-1">Must use AWS serverless services (Lambda, DynamoDB, Aurora Serverless v2)</Constraint>
+    <Constraint id="BC-2">Python 3.11 runtime for all application logic</Constraint>
+    <Constraint id="BC-3">Zero-downtime cutover with DNS failback capability</Constraint>
+    <Constraint id="BC-4">RPO/RTO requirements must be met via automated backup/restore</Constraint>
+  </BusinessContext>
+
+  <CurrentState>
+    <Architecture>
+      <Component name="Compute" type="OnPremises">x86 servers running legacy OS with limited automation</Component>
+      <Component name="Database" type="OnPremises">SQL-based relational databases on dedicated hardware</Component>
+      <Component name="Storage" type="OnPremises">Local disk storage with manual backup processes</Component>
+      <Component name="Networking" type="OnPremises">Internal network with limited external API exposure</Component>
+      <Component name="Monitoring" type="OnPremises">Basic monitoring with minimal automation and alerting</Component>
+      <Component name="Integration" type="OnPremises">Mix of internal APIs and batch file transfers</Component>
+    </Architecture>
+    <Limitations>
+      <Limitation>Manual scaling and capacity planning</Limitation>
+      <Limitation>Limited disaster recovery automation</Limitation>
+      <Limitation>Inconsistent monitoring and logging practices</Limitation>
+      <Limitation>Vendor lock-in with on-premises licensing</Limitation>
+      <Limitation>High operational overhead for patching and maintenance</Limitation>
+      <Limitation>No infrastructure-as-code; manual provisioning</Limitation>
+    </Limitations>
+    <TechnicalDebt>
+      <Item>Legacy OS versions requiring upgrade before migration</Item>
+      <Item>Unencrypted data at rest and in transit</Item>
+      <Item>No centralized secrets management</Item>
+      <Item>Batch processing with tight coupling and synchronous dependencies</Item>
+      <Item>Manual deployment processes prone to configuration drift</Item>
+    </TechnicalDebt>
+  </CurrentState>
+
+  <TargetState>
+    <Architecture>
+      <Layer name="API">
+        <Component name="API Gateway" type="Managed">
+          REST APIs with request validation, throttling, and WAF integration
+        </Component>
+        <Component name="Lambda Authorizers" type="Serverless">
+          Custom authentication/authorization logic in Python 3.11
+        </Component>
+      </Layer>
+      <Layer name="Compute">
+        <Component name="Lambda Functions" type="Serverless">
+          Event-driven Python 3.11 functions for business logic with auto-scaling
+        </Component>
+        <Component name="Step Functions" type="Orchestration">
+          Workflow orchestration for complex multi-step processes
+        </Component>
+      </Layer>
+      <Layer name="Data">
+        <Component name="DynamoDB" type="Managed">
+          High-write key-value store with on-demand capacity and point-in-time recovery
+        </Component>
+        <Component name="Aurora Serverless v2" type="Managed">
+          PostgreSQL-compatible relational database with auto-scaling ACUs
+        </Component>
+        <Component name="S3" type="Storage">
+          Event logs, file uploads, and data lake with lifecycle policies
+        </Component>
+      </Layer>
+      <Layer name="Integration">
+        <Component name="EventBridge" type="Messaging">
+          Asynchronous event routing between services with schema registry
+        </Component>
+        <Component name="SQS" type="Queue">
+          Work queues for reliable message processing with DLQ
+        </Component>
+      </Layer>
+      <Layer name="Security">
+        <Component name="IAM" type="Identity">
+          Least-privilege roles and policies for all services
+        </Component>
+        <Component name="Secrets Manager" type="Secrets">
+          Automatic rotation for database credentials and API keys
+        </Component>
+        <Component name="KMS" type="Encryption">
+          Customer-managed keys for encryption at rest
+        </Component>
+      </Layer>
+      <Layer name="Observability">
+        <Component name="CloudWatch" type="Monitoring">
+          Logs, metrics, alarms, and dashboards with structured JSON logging
+        </Component>
+        <Component name="X-Ray" type="Tracing">
+          Distributed tracing with OpenTelemetry instrumentation
+        </Component>
+        <Component name="CloudWatch Insights" type="Analytics">
+          Log analytics and query capabilities
+        </Component>
+      </Layer>
+    </Architecture>
+    <Principles>
+      <Principle id="TP-1">Serverless-first: prefer managed services over self-managed infrastructure</Principle>
+      <Principle id="TP-2">Event-driven: decouple components via asynchronous messaging</Principle>
+      <Principle id="TP-3">Infrastructure-as-Code: all resources provisioned via Terraform</Principle>
+      <Principle id="TP-4">Security by default: encryption, least privilege, secrets rotation</Principle>
+      <Principle id="TP-5">Observability built-in: structured logs, metrics, and traces for all components</Principle>
+      <Principle id="TP-6">Cost optimization: pay-per-use with idle cost caps and lifecycle management</Principle>
+    </Principles>
+  </TargetState>
+
+  <Decisions>
+    <Decision id="AD-1">
+      <Title>Serverless Compute with AWS Lambda</Title>
+      <Status>Approved</Status>
+      <Context>Replace on-premises x86 servers with event-driven compute</Context>
+      <Options>
+        <Option name="Lambda">Serverless, auto-scaling, pay-per-invocation</Option>
+        <Option name="ECS Fargate">Container-based, more control, higher baseline cost</Option>
+        <Option name="EC2">Lift-and-shift, operational overhead, not serverless-first</Option>
+      </Options>
+      <Choice>Lambda with Python 3.11 runtime</Choice>
+      <Rationale>Aligns with serverless-first guardrail, eliminates infrastructure management, automatic scaling, sub-second billing, integrates natively with EventBridge and API Gateway</Rationale>
+      <Implications>
+        <Implication>15-minute execution limit requires workflow decomposition</Implication>
+        <Implication>Cold start latency mitigated via provisioned concurrency for critical paths</Implication>
+        <Implication>Stateless design required; state externalized to DynamoDB/Aurora</Implication>
+      </Implications>
+    </Decision>
+
+    <Decision id="AD-2">
+      <Title>Hybrid Data Storage Strategy</Title>
+      <Status>Approved</Status>
+      <Context>Migrate SQL databases and support high-write workloads</Context>
+      <Options>
+        <Option name="DynamoDB only">NoSQL, high-write optimized, eventual consistency</Option>
+        <Option name="Aurora Serverless v2 only">Relational, ACID, higher cost for high-write</Option>
+        <Option name="Hybrid">DynamoDB for KV/high-write, Aurora for relational/complex queries</Option>
+      </Options>
+      <Choice>Hybrid: DynamoDB + Aurora Serverless v2 + S3</Choice>
+      <Rationale>DynamoDB handles high-write key-value patterns with single-digit millisecond latency; Aurora Serverless v2 provides PostgreSQL compatibility for complex relational queries and existing SQL workloads; S3 for event logs and file storage with lifecycle policies</Rationale>
+      <Implications>
+        <Implication>Data model refactoring required for DynamoDB single-table design</Implication>
+        <Implication>Eventual consistency considerations for DynamoDB reads</Implication>
+        <Implication>Aurora ACU scaling configuration needed to balance cost and performance</Implication>
+      </Implications>
+    </Decision>
+
+    <Decision id="AD-3">
+      <Title>Event-Driven Architecture with EventBridge</Title>
+      <Status>Approved</Status>
+      <Context>Decouple batch processing and synchronous API dependencies</Context>
+      <Options>
+        <Option name="EventBridge">Native AWS event bus, schema registry, filtering</Option>
+        <Option name="SNS/SQS">Simple pub-sub, no schema validation</Option>
+        <Option name="Kinesis">Streaming, higher complexity, over-engineered for use case</Option>
+      </Options>
+      <Choice>EventBridge for async events, SQS for work queues</Choice>
+      <Rationale>EventBridge provides schema registry, content-based filtering, and native integration with 90+ AWS services; SQS ensures reliable message processing with visibility timeout and DLQ for failed messages</Rationale>
+      <Implications>
+        <Implication>Event schema versioning strategy required</Implication>
+        <Implication>Idempotency tokens needed for at-least-once delivery semantics</Implication>
+        <Implication>Dead-letter queue monitoring and replay automation required</Implication>
+      </Implications>
+    </Decision>
+
+    <Decision id="AD-4">
+      <Title>Terraform for Infrastructure-as-Code</Title>
+      <Status>Approved</Status>
+      <Context>Provision and manage all AWS resources declaratively</Context>
+      <Options>
+        <Option name="Terraform">Multi-cloud, mature ecosystem, state management</Option>
+        <Option name="CloudFormation">AWS-native, tight integration, YAML/JSON</Option>
+        <Option name="CDK">Programmatic, Python support, generates CloudFormation</Option>
+      </Options>
+      <Choice>Terraform with modular design and remote state in S3</Choice>
+      <Rationale>Meets IaC requirement from BRD, mature provider ecosystem, HCL readability, supports multi-environment deployments with workspaces, state locking via DynamoDB</Rationale>
+      <Implications>
+        <Implication>Terraform state file security and backup critical</Implication>
+        <Implication>Module versioning and registry needed for reusability</Implication>
+        <Implication>CI/CD pipeline integration for plan/apply automation</Implication>
+      </Implications>
+    </Decision>
+
+    <Decision id="AD-5">
+      <Title>OpenTelemetry for Observability</Title>
+      <Status>Approved</Status>
+      <Context>Implement distributed tracing and structured logging</Context>
+      <Options>
+        <Option name="CloudWatch only">Native AWS, basic metrics and logs</Option>
+        <Option name="OTEL + CloudWatch">Vendor-neutral instrumentation, future portability</Option>
+        <Option name="Third-party APM">Additional cost, vendor lock-in</Option>
+      </Options>
+      <Choice>OpenTelemetry SDK with CloudWatch an

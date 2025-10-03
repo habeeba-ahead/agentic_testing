@@ -1,0 +1,31 @@
+{
+  "ranking": [
+    {
+      "prompt": "E_combined",
+      "score": 94,
+      "reasons": "Perfect guardrail alignment, complete CloudMapping with all 5 sections, all NFRs with numeric targets, comprehensive risk mitigations, and explicit IaC-ready patterns."
+    },
+    {
+      "prompt": "A_schema_compiler",
+      "score": 91,
+      "reasons": "Excellent structure with all required tags, strong CloudMapping detail, comprehensive Services breakdown, but slightly verbose and some risks address BRD-guardrail tension less concisely."
+    },
+    {
+      "prompt": "C_catalog_first",
+      "score": 68,
+      "reasons": "Good component catalog and observability detail, but missing critical tags (CloudMapping, Constraints, Services), no numeric NFR targets, and incomplete IaC mappability."
+    },
+    {
+      "prompt": "D_diff_to_target",
+      "score": 65,
+      "reasons": "Strong current-vs-target analysis and decision rationale, but missing CloudMapping/Services/Patterns tags, no numeric NFRs, and less actionable for direct IaC generation."
+    },
+    {
+      "prompt": "B_critic_refine",
+      "score": 42,
+      "reasons": "Comprehensive narrative with quality attributes, but critically missing all 8 required XML tags, no CloudMapping sections, no numeric NFRs, and poor IaC mappability."
+    }
+  ],
+  "winner": "E_combined",
+  "notes": "E_combined wins by balancing completeness, guardrail fidelity, and IaC readiness. It captures the BRD's EC2/ECS mention as a risk while adhering to serverless-first, provides explicit AWS service mappings for every layer, and includes numeric SLAs. A_schema_compiler is a close second with richer service decomposition but slightly over-engineers the domain model. B_critic_refine fails structural requirements despite good prose. C and D lack critical tags and numeric targets."
+}
