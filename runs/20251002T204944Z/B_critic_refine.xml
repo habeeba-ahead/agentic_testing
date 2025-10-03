@@ -1,0 +1,250 @@
+```xml
+<architecture_spec>
+  <metadata>
+    <project_name>Application Modernization and Migration to AWS</project_name>
+    <version>1.0</version>
+    <last_updated>2024</last_updated>
+    <architecture_tier>Cloud-Native Serverless</architecture_tier>
+  </metadata>
+
+  <business_requirements>
+    <requirement id="BR-001" priority="critical">
+      <description>Migrate on-premises application to AWS using Infrastructure-as-Code</description>
+      <success_criteria>All infrastructure provisioned via Terraform with modular, reusable code</success_criteria>
+    </requirement>
+    <requirement id="BR-002" priority="critical">
+      <description>Implement application automation and orchestration using Python</description>
+      <success_criteria>Python-based automation operational for workflows, data processing, and orchestration</success_criteria>
+    </requirement>
+    <requirement id="BR-003" priority="critical">
+      <description>Achieve Minimum Entry Criteria (MEC) compliance before and after migration</description>
+      <success_criteria>All MEC validation checks passed including OS versions, patching, backup, DR, monitoring</success_criteria>
+    </requirement>
+    <requirement id="BR-004" priority="high">
+      <description>Establish CI/CD pipelines for infrastructure and application code</description>
+      <success_criteria>Automated deployment pipelines operational for Terraform and Python code</success_criteria>
+    </requirement>
+    <requirement id="BR-005" priority="high">
+      <description>Implement backup, restore, and disaster recovery capabilities</description>
+      <success_criteria>RPO/RTO targets met with documented DR strategy and tested failover procedures</success_criteria>
+    </requirement>
+  </business_requirements>
+
+  <system_context>
+    <description>Modernized cloud-native application on AWS with serverless-first architecture, migrated from on-premises x86 infrastructure</description>
+    <users>
+      <user_type>Internal Business Users</user_type>
+      <user_type>External API Consumers</user_type>
+      <user_type>DevOps Engineers</user_type>
+      <user_type>Data Analysts</user_type>
+    </users>
+    <external_systems>
+      <system>Legacy On-Premises Systems (during migration)</system>
+      <system>External Partner APIs</system>
+      <system>Batch File Transfer Systems</system>
+      <system>Identity Provider (AWS SSO)</system>
+    </external_systems>
+  </system_context>
+
+  <architectural_drivers>
+    <driver type="business">
+      <name>Cloud Migration</name>
+      <description>Complete migration from on-premises to AWS cloud infrastructure</description>
+      <impact>high</impact>
+    </driver>
+    <driver type="technical">
+      <name>Serverless-First Architecture</name>
+      <description>Leverage managed serverless services to minimize operational overhead and optimize costs</description>
+      <impact>high</impact>
+    </driver>
+    <driver type="compliance">
+      <name>MEC Compliance</name>
+      <description>Meet all Minimum Entry Criteria for security, patching, monitoring, and backup</description>
+      <impact>critical</impact>
+    </driver>
+    <driver type="operational">
+      <name>Infrastructure as Code</name>
+      <description>All infrastructure managed through Terraform for repeatability and version control</description>
+      <impact>high</impact>
+    </driver>
+  </architectural_drivers>
+
+  <quality_attributes>
+    <quality_attribute>
+      <name>Security</name>
+      <priority>critical</priority>
+      <scenario>Enforce IAM least privilege, encryption at rest and in transit, MEC security baselines</scenario>
+      <measures>
+        <measure>All data encrypted using KMS</measure>
+        <measure>IAM roles with minimal permissions</measure>
+        <measure>AWS Security Hub compliance score &gt; 90%</measure>
+        <measure>CloudTrail and GuardDuty enabled</measure>
+      </measures>
+    </quality_attribute>
+    <quality_attribute>
+      <name>Performance</name>
+      <priority>high</priority>
+      <scenario>Meet or exceed baseline throughput and latency requirements from on-premises</scenario>
+      <measures>
+        <measure>API response time &lt; 500ms p95</measure>
+        <measure>Database query latency &lt; 100ms p95</measure>
+        <measure>Batch processing throughput maintained or improved</measure>
+      </measures>
+    </quality_attribute>
+    <quality_attribute>
+      <name>Scalability</name>
+      <priority>high</priority>
+      <scenario>Automatically scale to handle variable workload demands</scenario>
+      <measures>
+        <measure>Serverless functions scale to 1000+ concurrent executions</measure>
+        <measure>Aurora Serverless scales ACUs based on demand</measure>
+        <measure>API Gateway handles traffic spikes without throttling</measure>
+      </measures>
+    </quality_attribute>
+    <quality_attribute>
+      <name>Reliability</name>
+      <priority>critical</priority>
+      <scenario>High availability with multi-AZ deployment and disaster recovery</scenario>
+      <measures>
+        <measure>99.9% uptime SLA</measure>
+        <measure>Multi-AZ deployment for all critical components</measure>
+        <measure>RPO &lt; 1 hour, RTO &lt; 4 hours</measure>
+      </measures>
+    </quality_attribute>
+    <quality_attribute>
+      <name>Observability</name>
+      <priority>high</priority>
+      <scenario>Comprehensive monitoring, logging, and tracing for operational visibility</scenario>
+      <measures>
+        <measure>CloudWatch metrics for all services</measure>
+        <measure>Structured logs with correlation IDs</measure>
+        <measure>X-Ray tracing for distributed requests</measure>
+        <measure>OTEL instrumentation for custom metrics</measure>
+      </measures>
+    </quality_attribute>
+    <quality_attribute>
+      <name>Cost Efficiency</name>
+      <priority>high</priority>
+      <scenario>Optimize cloud costs through right-sizing and lifecycle management</scenario>
+      <measures>
+        <measure>Serverless services minimize idle costs</measure>
+        <measure>S3 lifecycle policies for data tiering</measure>
+        <measure>Resource tagging for cost allocation</measure>
+        <measure>Monthly cost variance &lt; 10%</measure>
+      </measures>
+    </quality_attribute>
+    <quality_attribute>
+      <name>Maintainability</name>
+      <priority>high</priority>
+      <scenario>Infrastructure and application code easily maintained and updated</scenario>
+      <measures>
+        <measure>Modular Terraform code with reusable modules</measure>
+        <measure>Python code follows PEP 8 standards</measure>
+        <measure>CI/CD pipelines automate testing and deployment</measure>
+      </measures>
+    </quality_attribute>
+  </quality_attributes>
+
+  <constraints>
+    <constraint type="technical">
+      <description>Cloud provider limited to AWS for MVP</description>
+      <rationale>Business decision for initial migration phase</rationale>
+    </constraint>
+    <constraint type="technical">
+      <description>Python 3.11 runtime for all application code</description>
+      <rationale>Standardization and security support</rationale>
+    </constraint>
+    <constraint type="technical">
+      <description>Serverless-first architecture baseline</description>
+      <rationale>Minimize operational overhead and optimize costs per guardrails</rationale>
+    </constraint>
+    <constraint type="technical">
+      <description>Infrastructure provisioned exclusively via Terraform</description>
+      <rationale>IaC requirement for repeatability and version control</rationale>
+    </constraint>
+    <constraint type="compliance">
+      <description>Must meet all MEC requirements before migration</description>
+      <rationale>Organizational security and operational standards</rationale>
+    </constraint>
+    <constraint type="operational">
+      <description>Migration cutover during weekend maintenance window</description>
+      <rationale>Minimize business disruption</rationale>
+    </constraint>
+  </constraints>
+
+  <architectural_decisions>
+    <decision id="AD-001">
+      <title>Adopt Serverless-First Architecture</title>
+      <status>accepted</status>
+      <context>Need to minimize operational overhead while optimizing costs and meeting scalability requirements</context>
+      <decision>Use AWS Lambda for compute, Aurora Serverless v2 for relational data, DynamoDB for high-write KV, API Gateway for APIs</decision>
+      <consequences>
+        <pro>Automatic scaling without capacity planning</pro>
+        <pro>Pay-per-use pricing model reduces idle costs</pro>
+        <pro>Reduced operational maintenance burden</pro>
+        <con>Cold start latency for Lambda functions</con>
+        <con>Vendor lock-in to AWS services</con>
+      </consequences>
+    </decision>
+    <decision id="AD-002">
+      <title>Use Terraform for Infrastructure as Code</title>
+      <status>accepted</status>
+      <context>Requirement for repeatable, version-controlled infrastructure provisioning</context>
+      <decision>Implement all AWS infrastructure using Terraform with modular design</decision>
+      <consequences>
+        <pro>Infrastructure changes tracked in version control</pro>
+        <pro>Repeatable deployments across environments</pro>
+        <pro>Declarative infrastructure definition</pro>
+        <con>Learning curve for team members</con>
+        <con>State management complexity</con>
+      </consequences>
+    </decision>
+    <decision id="AD-003">
+      <title>Python 3.11 for Application Automation</title>
+      <status>accepted</status>
+      <context>Need standardized runtime for Lambda functions, Step Functions, and automation scripts</context>
+      <decision>Standardize on Python 3.11 for all application code and automation</decision>
+      <consequences>
+        <pro>Single language reduces complexity</pro>
+        <pro>Rich ecosystem of libraries</pro>
+        <pro>Strong AWS SDK support</pro>
+        <con>Performance limitations vs compiled languages</con>
+      </consequences>
+    </decision>
+    <decision id="AD-004">
+      <title>Multi-Tier Data Storage Strategy</title>
+      <status>accepted</status>
+      <context>Different data access patterns require optimized storage solutions</context>
+      <decision>Use DynamoDB for high-write KV data, Aurora Serverless v2 for relational data, S3 for events/logs/objects</decision>
+      <consequences>
+        <pro>Optimized performance for each data pattern</pro>
+        <pro>Cost-effective storage tiering</pro>
+        <con>Increased complexity managing multiple data stores</con>
+        <con>Data consistency challenges across stores</con>
+      </consequences>
+    </decision>
+    <decision id="AD-005">
+      <title>EventBridge and SQS for Asynchronous Processing</title>
+      <status>accepted</status>
+      <context>Need decoupled, event-driven architecture for scalability and resilience</context>
+      <decision>Use EventBridge for event routing and SQS for work queues</decision>
+      <consequences>
+        <pro>Loose coupling between components</pro>
+        <pro>Built-in retry and dead-letter queue support</pro>
+        <pro>Scalable event processing</pro>
+        <con>Eventual consistency model</con>
+        <con>Debugging distributed flows more complex</con>
+      </consequences>
+    </decision>
+    <decision id="AD-006">
+      <title>CloudWatch and OTEL for Observability</title>
+      <status>accepted</status>
+      <context>Need comprehensive monitoring, logging, and tracing per MEC requirements</context>
+      <decision>Use CloudWatch for metrics and logs, X-Ray for tracing, OTEL for instrumentation</decision>
+      <consequences>
+        <pro>Native AWS integration</pro>
+        <pro>Structured logging with correlation</pro>
+        <pro>End-to-end request tracing</pro>
+        <con>CloudWatch costs can escalate with high log volume</con>
+      </consequences>
+    </decision
