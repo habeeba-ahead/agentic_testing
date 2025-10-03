@@ -1,0 +1,438 @@
+xml
+<ArchitectureSpec>
+  <Metadata>
+    <ProjectName>Monolith Java Application Cloud Migration and Modernization</ProjectName>
+    <TargetState>Cloud-native microservices architecture on AWS with serverless-first approach</TargetState>
+    <SourceRepository>https://github.com/jszlenk/Monolith-Training.git</SourceRepository>
+    <GeneratedDate>2024-01-01</GeneratedDate>
+    <Version>1.0</Version>
+  </Metadata>
+
+  <Decisions>
+    <Decision id="DEC-001">
+      <Title>Serverless-First Architecture</Title>
+      <Context>Migrating from monolithic Java application to cloud-native architecture requiring scalability, cost optimization, and reduced operational overhead</Context>
+      <Choice>AWS Lambda with Python 3.11 runtime for all microservices</Choice>
+      <Rationale>Serverless eliminates infrastructure management, provides automatic scaling, pay-per-use pricing, and aligns with guardrail requirements. Python 3.11 offers modern language features, extensive AWS SDK support, and faster cold starts than Java</Rationale>
+      <Consequences>Requires rewrite from Java to Python; 15-minute Lambda timeout limits long-running processes; cold start latency for infrequent functions; stateless execution model requires external state management</Consequences>
+      <Alternatives>
+        <Alternative>ECS Fargate with containerized Java services - rejected due to higher operational complexity and cost</Alternative>
+        <Alternative>EKS with Kubernetes - rejected due to operational overhead and over-engineering for requirements</Alternative>
+      </Alternatives>
+    </Decision>
+
+    <Decision id="DEC-002">
+      <Title>Polyglot Persistence Strategy</Title>
+      <Context>Monolithic application uses single relational database; microservices require independent data stores optimized for access patterns</Context>
+      <Choice>DynamoDB for high-write key-value workloads (sessions, user profiles), Aurora Serverless v2 PostgreSQL for relational data (orders, transactions), S3 for event logs and audit trails</Choice>
+      <Rationale>DynamoDB provides single-digit millisecond latency, automatic scaling, and cost-effective for user/session data. Aurora Serverless v2 maintains ACID guarantees for financial transactions while auto-scaling capacity. S3 offers durable, cost-effective storage for immutable event logs</Rationale>
+      <Consequences>Data consistency challenges across services; requires saga pattern for distributed transactions; increased complexity in data migration; eventual consistency model for DynamoDB requires application-level handling</Consequences>
+      <Alternatives>
+        <Alternative>Single Aurora database with schema separation - rejected due to coupling and scaling limitations</Alternative>
+        <Alternative>DocumentDB for all services - rejected due to cost and lack of true ACID for financial data</Alternative>
+      </Alternatives>
+    </Decision>
+
+    <Decision id="DEC-003">
+      <Title>Event-Driven Architecture with EventBridge</Title>
+      <Context>Order processing and inter-service communication require asynchronous, decoupled integration</Context>
+      <Choice>Amazon EventBridge as primary event bus for domain events, SQS for work queues and retry logic, SNS for fan-out notifications</Choice>
+      <Rationale>EventBridge provides schema registry, event filtering, multiple targets, and native AWS service integration. SQS ensures reliable message delivery with dead-letter queues. Decouples services and enables event sourcing patterns</Rationale>
+      <Consequences>Eventual consistency across services; requires idempotent message handlers; increased debugging complexity for distributed flows; event schema evolution management needed</Consequences>
+      <Alternatives>
+        <Alternative>Kinesis Data Streams - rejected due to higher cost and complexity for event volumes</Alternative>
+        <Alternative>SNS-only architecture - rejected due to lack of message persistence and retry capabilities</Alternative>
+      </Alternatives>
+    </Decision>
+
+    <Decision id="DEC-004">
+      <Title>API Gateway for Unified Service Access</Title>
+      <Context>Multiple microservices require unified API management, authentication, rate limiting, and monitoring</Context>
+      <Choice>Amazon API Gateway REST APIs with Lambda proxy integration, Cognito for authentication, WAF for security</Choice>
+      <Rationale>API Gateway provides managed authentication, request validation, throttling, caching, and CloudWatch integration. Cognito handles user authentication with JWT tokens. WAF protects against common attacks</Rationale>
+      <Consequences>API Gateway pricing based on requests; 29-second timeout limit; requires careful cache strategy; cold start latency for Lambda backends</Consequences>
+      <Alternatives>
+        <Alternative>Application Load Balancer with Lambda targets - rejected due to lack of API management features</Alternative>
+        <Alternative>AppSync GraphQL - rejected due to REST API requirement and team familiarity</Alternative>
+      </Alternatives>
+    </Decision>
+
+    <Decision id="DEC-005">
+      <Title>Infrastructure as Code with Terraform</Title>
+      <Context>Cloud infrastructure must be version-controlled, repeatable, and auditable</Context>
+      <Choice>Terraform for all infrastructure provisioning with modular design, remote state in S3, state locking with DynamoDB</Choice>
+      <Rationale>Terraform provides cloud-agnostic syntax, extensive AWS provider support, state management, and plan/apply workflow. Aligns with guardrail requirements and enables GitOps practices</Rationale>
+      <Consequences>Learning curve for team; state file management complexity; potential for state drift; requires careful handling of secrets</Consequences>
+      <Alternatives>
+        <Alternative>AWS CloudFormation - rejected due to AWS-specific lock-in and verbose YAML</Alternative>
+        <Alternative>AWS CDK - rejected due to additional abstraction layer and Python/TypeScript requirement</Alternative>
+      </Alternatives>
+    </Decision>
+
+    <Decision id="DEC-006">
+      <Title>Distributed Session Management</Title>
+      <Context>Stateless Lambda functions require externalized session storage with sub-100ms latency</Context>
+      <Choice>DynamoDB with TTL for session storage, ElastiCache Redis reserved for high-frequency session access patterns only</Choice>
+      <Rationale>DynamoDB provides automatic scaling, built-in TTL for session expiration, and single-digit millisecond latency. Cost-effective for variable load. Redis reserved for extreme performance requirements</Rationale>
+      <Consequences>Eventual consistency for session reads; requires session data size limits; session serialization overhead; cross-region replication complexity</Consequences>
+      <Alternatives>
+        <Alternative>ElastiCache Redis for all sessions - rejected due to cost and operational overhead</Alternative>
+        <Alternative>JWT-only stateless sessions - rejected due to token size and revocation challenges</Alternative>
+      </Alternatives>
+    </Decision>
+
+    <Decision id="DEC-007">
+      <Title>Observability with CloudWatch and OpenTelemetry</Title>
+      <Context>Distributed microservices require centralized logging, metrics, and distributed tracing</Context>
+      <Choice>CloudWatch Logs for structured JSON logs, CloudWatch Metrics for service metrics, X-Ray with OpenTelemetry SDK for distributed tracing, CloudWatch Dashboards for visualization</Choice>
+      <Rationale>Native AWS integration, automatic Lambda instrumentation, cost-effective for serverless workloads. OpenTelemetry provides vendor-neutral instrumentation and future portability</Rationale>
+      <Consequences>CloudWatch Logs costs scale with volume; requires log sampling strategy; X-Ray sampling needed for high-traffic services; cross-service correlation requires trace context propagation</Consequences>
+      <Alternatives>
+        <Alternative>ELK Stack on EC2 - rejected due to operational overhead and cost</Alternative>
+        <Alternative>Third-party APM (Datadog, New Relic) - rejected due to cost and guardrail preference for AWS-native</Alternative>
+      </Alternatives>
+    </Decision>
+
+    <Decision id="DEC-008">
+      <Title>Security and Secrets Management</Title>
+      <Context>Microservices require secure credential management, encryption, and access control</Context>
+      <Choice>AWS Secrets Manager for database credentials and API keys, KMS for encryption keys, IAM roles for service authentication, Parameter Store for non-sensitive configuration</Choice>
+      <Rationale>Secrets Manager provides automatic rotation, versioning, and audit logging. KMS enables envelope encryption. IAM roles eliminate credential management for AWS services. Parameter Store cost-effective for configuration</Rationale>
+      <Consequences>Secrets Manager costs per secret; API calls for secret retrieval add latency; requires secret rotation strategy; IAM policy complexity increases with services</Consequences>
+      <Alternatives>
+        <Alternative>HashiCorp Vault - rejected due to operational overhead and additional infrastructure</Alternative>
+        <Alternative>Environment variables for secrets - rejected due to security risks and lack of rotation</Alternative>
+      </Alternatives>
+    </Decision>
+
+    <Decision id="DEC-009">
+      <Title>CI/CD Pipeline Architecture</Title>
+      <Context>Automated build, test, and deployment pipeline required for multiple microservices</Context>
+      <Choice>AWS CodePipeline with CodeBuild for builds, CodeDeploy for Lambda deployments, GitHub integration for source control, Lambda aliases for blue-green deployments</Choice>
+      <Rationale>Native AWS integration, managed service reduces operational overhead, supports parallel pipelines per service, integrates with CloudWatch for monitoring</Rationale>
+      <Consequences>AWS-specific pipeline definitions; limited advanced deployment strategies compared to third-party tools; requires custom scripts for complex workflows</Consequences>
+      <Alternatives>
+        <Alternative>GitHub Actions - rejected due to preference for AWS-native tooling</Alternative>
+        <Alternative>Jenkins on EC2 - rejected due to operational overhead and cost</Alternative>
+      </Alternatives>
+    </Decision>
+
+    <Decision id="DEC-010">
+      <Title>Data Migration Strategy</Title>
+      <Context>Migrate data from monolithic database to distributed data stores with zero data loss</Context>
+      <Choice>AWS Database Migration Service (DMS) for initial bulk migration, custom Lambda functions for incremental sync, dual-write pattern during transition, data validation with Step Functions orchestration</Choice>
+      <Rationale>DMS provides proven migration tooling with minimal downtime. Dual-write ensures data consistency during transition. Step Functions orchestrates complex validation workflows</Rationale>
+      <Consequences>Dual-write increases application complexity; requires careful transaction management; migration window extends project timeline; rollback complexity</Consequences>
+      <Alternatives>
+        <Alternative>Big-bang migration - rejected due to high risk and extended downtime</Alternative>
+        <Alternative>Manual ETL scripts - rejected due to error-prone process and lack of monitoring</Alternative>
+      </Alternatives>
+    </Decision>
+
+    <Decision id="DEC-011">
+      <Title>Caching Strategy</Title>
+      <Context>Reduce database load and improve response times for frequently accessed data</Context>
+      <Choice>API Gateway caching for GET endpoints, DynamoDB DAX for hot product catalog data, CloudFront for static assets, Lambda function-level caching for configuration</Choice>
+      <Rationale>Multi-layer caching optimizes cost and performance. API Gateway cache reduces Lambda invocations. DAX provides microsecond latency for DynamoDB. CloudFront reduces origin load</Rationale>
+      <Consequences>Cache invalidation complexity; increased memory usage in Lambda; cache consistency challenges; additional cost for DAX and API Gateway caching</Consequences>
+      <Alternatives>
+        <Alternative>ElastiCache Redis for all caching - rejected due to cost and operational overhead</Alternative>
+        <Alternative>No caching strategy - rejected due to performance and cost implications</Alternative>
+      </Alternatives>
+    </Decision>
+
+    <Decision id="DEC-012">
+      <Title>Disaster Recovery and Multi-Region Strategy</Title>
+      <Context>Meet RTO of 4 hours and RPO of 1 hour with business continuity requirements</Context>
+      <Choice>Active-passive multi-region deployment with primary in us-east-1, DR in us-west-2. DynamoDB global tables for session data, Aurora cross-region replication for transactional data, S3 cross-region replication for events, Route 53 health checks for failover</Choice>
+      <Rationale>Active-passive reduces cost while meeting RTO/RPO. DynamoDB global tables provide automatic replication. Aurora replication ensures data durability. Route 53 enables automated DNS failover</Rationale>
+      <Consequences>Increased infrastructure cost for DR region; replication lag may exceed RPO under load; failover testing complexity; cross-region data transfer costs</Consequences>
+      <Alternatives>
+        <Alternative>Active-active multi-region - rejected due to cost and complexity</Alternative>
+        <Alternative>Backup-only strategy - rejected due to RTO/RPO requirements</Alternative>
+      </Alternatives>
+    </Decision>
+  </Decisions>
+
+  <Patterns>
+    <Pattern id="PAT-001">
+      <Name>Strangler Fig Migration Pattern</Name>
+      <Context>Gradual migration from monolith to microservices with minimal business disruption</Context>
+      <Implementation>API Gateway routes traffic to Lambda microservices for migrated functionality, falls back to monolith for non-migrated features. Feature flags control routing. Incremental service extraction over 16-week migration phase</Implementation>
+      <Benefits>Reduces migration risk, enables incremental validation, allows rollback per service, maintains business continuity</Benefits>
+      <Tradeoffs>Temporary complexity with dual systems, requires routing logic maintenance, extended migration timeline</Tradeoffs>
+    </Pattern>
+
+    <Pattern id="PAT-002">
+      <Name>Saga Pattern for Distributed Transactions</Name>
+      <Context>Order processing spans multiple services (user, product, payment, inventory) requiring transactional consistency</Context>
+      <Implementation>Step Functions orchestrates order workflow as saga with compensating transactions. Each service publishes events to EventBridge. Failure triggers compensation Lambda functions to rollback partial changes. DynamoDB stores saga state</Implementation>
+      <Benefits>Maintains data consistency across services, provides audit trail, enables complex workflows, handles failures gracefully</Benefits>
+      <Tradeoffs>Increased complexity, eventual consistency, requires idempotent operations, compensation logic maintenance</Tradeoffs>
+    </Pattern>
+
+    <Pattern id="PAT-003">
+      <Name>API Gateway Backend for Frontend (BFF)</Name>
+      <Context>Different client types (web, mobile) require optimized API contracts</Context>
+      <Implementation>Separate API Gateway REST APIs per client type with Lambda resolvers aggregating backend microservice calls. Lambda functions compose responses optimized for client needs. Cognito authorizers validate JWT tokens</Implementation>
+      <Benefits>Optimized payloads per client, reduced client complexity, centralized authentication, independent client evolution</Benefits>
+      <Tradeoffs>Duplicate API definitions, increased Lambda invocations, potential code duplication in resolvers</Tradeoffs>
+    </Pattern>
+
+    <Pattern id="PAT-004">
+      <Name>Event Sourcing for Order Processing</Name>
+      <Context>Order state changes require complete audit trail and ability to reconstruct state</Context>
+      <Implementation>All order events (created, paid, shipped, delivered) published to EventBridge and stored in S3 as immutable event log. Lambda consumers update DynamoDB read models. Athena queries S3 for analytics and audit</Implementation>
+      <Benefits>Complete audit trail, temporal queries, event replay capability, analytics-ready data</Benefits>
+      <Tradeoffs>Storage costs for event history, eventual consistency for read models, increased complexity, event schema evolution challenges</Tradeoffs>
+    </Pattern>
+
+    <Pattern id="PAT-005">
+      <Name>Circuit Breaker for Service Resilience</Name>
+      <Context>Prevent cascade failures when downstream services experience issues</Context>
+      <Implementation>Lambda functions implement circuit breaker logic using DynamoDB to track failure rates. After threshold breaches, circuit opens and returns cached/default responses. CloudWatch alarms trigger on open circuits. Exponential backoff for retry attempts</Implementation>
+      <Benefits>Prevents cascade failures, improves system resilience, reduces load on failing services, faster failure detection</Benefits>
+      <Tradeoffs>Requires failure threshold tuning, adds latency for state checks, degraded functionality during outages</Tradeoffs>
+    </Pattern>
+
+    <Pattern id="PAT-006">
+      <Name>CQRS for Product Catalog</Name>
+      <Context>Product reads vastly outnumber writes; read and write access patterns differ significantly</Context>
+      <Implementation>Write model uses Aurora Serverless v2 for product management with ACID guarantees. Lambda functions publish product change events to EventBridge. Read model consumers update DynamoDB optimized for query patterns. DAX accelerates hot product reads. S3 stores product images with CloudFront distribution</Implementation>
+      <Benefits>Optimized read performance, independent scaling of reads/writes, flexible read model design, reduced database load</Benefits>
+      <Tradeoffs>Eventual consistency between models, duplicate data storage, synchronization complexity, increased operational overhead</Tradeoffs>
+    </Pattern>
+
+    <Pattern id="PAT-007">
+      <Name>Bulkhead Isolation Pattern</Name>
+      <Context>Isolate service resources to prevent resource exhaustion affecting other services</Context>
+      <Implementation>Separate Lambda functions per service with reserved concurrency limits. Dedicated SQS queues per service with DLQs. Service-specific DynamoDB tables with provisioned capacity or on-demand mode. VPC subnets per service tier</Implementation>
+      <Benefits>Fault isolation, predictable performance, resource guarantees, blast radius containment</Benefits>
+      <Tradeoffs>Increased resource costs, potential underutilization, configuration complexity, capacity planning required</Tradeoffs>
+    </Pattern>
+
+    <Pattern id="PAT-008">
+      <Name>Cache-Aside Pattern</Name>
+      <Context>Reduce database load for frequently accessed product and user data</Context>
+      <Implementation>Lambda functions check DynamoDB cache before querying Aurora. Cache misses trigger database query and cache population with TTL. API Gateway caching for GET endpoints. CloudFront caches static content. Cache invalidation via EventBridge events</Implementation>
+      <Benefits>Reduced database load, improved response times, cost optimization, flexible TTL policies</Benefits>
+      <Tradeoffs>Cache consistency challenges, increased complexity, cold cache performance, memory overhead</Tradeoffs>
+    </Pattern>
+
+    <Pattern id="PAT-009">
+      <Name>Sidecar Pattern for Cross-Cutting Concerns</Name>
+      <Context>Consistent logging, tracing, and metrics across all Lambda functions</Context>
+      <Implementation>Lambda layers provide shared libraries for OpenTelemetry instrumentation, structured logging, error handling, and secret retrieval. Decorator functions wrap business logic with observability. CloudWatch Logs receives structured JSON logs. X-Ray receives traces</Implementation>
+      <Benefits>Consistent observability, reduced code duplication, centralized updates, standardized patterns</Benefits>
+      <Tradeoffs>Lambda package size increases, layer version management, potential performance overhead</Tradeoffs>
+    </Pattern>
+
+    <Pattern id="PAT-010">
+      <Name>Database per Service Pattern</Name>
+      <Context>Each microservice requires independent data management and schema evolution</Context>
+      <Implementation>User service uses DynamoDB for profiles and sessions. Product service uses Aurora for catalog and DynamoDB for read model. Order service uses Aurora for transactions and S3 for event sourcing. No direct database access between services; integration via APIs and events only</Implementation>
+      <Benefits>Service independence, technology flexibility, isolated failures, independent scaling</Benefits>
+      <Tradeoffs>Data duplication, distributed query complexity, transaction management challenges, increased operational overhead</Tradeoffs>
+    </Pattern>
+
+    <Pattern id="PAT-011">
+      <Name>Retry with Exponential Backoff and Jitter</Name>
+      <Context>Handle transient failures in distributed system gracefully</Context>
+      <Implementation>Lambda functions implement exponential backoff with jitter for AWS SDK calls. SQS queues configured with visibility timeout and maxReceiveCount for DLQ routing. Step Functions retry policies for workflow steps. CloudWatch alarms on DLQ depth</Implementation>
+      <Benefits>Handles transient failures, reduces thundering herd, improves success rates, automatic recovery</Benefits>
+      <Tradeoffs>Increased latency for retries, complexity in retry logic, potential for duplicate processing</Tradeoffs>
+    </Pattern>
+
+    <Pattern id="PAT-012">
+      <Name>Blue-Green Deployment with Lambda Aliases</Name>
+      <Context>Zero-downtime deployments with instant rollback capability</Context>
+      <Implementation>Lambda versions with weighted aliases (blue=90%, green=10% during canary). API Gateway stages point to aliases. CloudWatch alarms monitor error rates and latency. CodeDeploy shifts traffic automatically or rolls back on alarm. Step-by-step traffic shifting over 30 minutes</Implementation>
+      <Benefits>Zero downtime, instant rollback, gradual traffic shifting, production testing with real traffic</Benefits>
+      <Tradeoffs>Increased deployment complexity, requires comprehensive monitoring, version management overhead</Tradeoffs>
+    </Pattern>
+  </Patterns>
+
+  <Services>
+    <Service id="SVC-001">
+      <Name>User Management Service</Name>
+      <Description>Handles user registration, authentication, profile management, and session management</Description>
+      <Responsibilities>
+        <Responsibility>User registration with validation</Responsibility>
+        <Responsibility>User authentication and JWT token generation</Responsibility>
+        <Responsibility>User profile CRUD operations</Responsibility>
+        <Responsibility>Session creation and validation</Responsibility>
+        <Responsibility>Password reset workflows</Responsibility>
+        <Responsibility>User preference management</Responsibility>
+      </Responsibilities>
+      <APIs>
+        <API>
+          <Endpoint>POST /users/register</Endpoint>
+          <Method>POST</Method>
+          <Description>Register new user account</Description>
+          <Authentication>None (public)</Authentication>
+        </API>
+        <API>
+          <Endpoint>POST /users/login</Endpoint>
+          <Method>POST</Method>
+          <Description>Authenticate user and return JWT token</Description>
+          <Authentication>None (public)</Authentication>
+        </API>
+        <API>
+          <Endpoint>GET /users/{userId}</Endpoint>
+          <Method>GET</Method>
+          <Description>Retrieve user profile</Description>
+          <Authentication>Cognito JWT</Authentication>
+        </API>
+        <API>
+          <Endpoint>PUT /users/{userId}</Endpoint>
+          <Method>PUT</Method>
+          <Description>Update user profile</Description>
+          <Authentication>Cognito JWT</Authentication>
+        </API>
+        <API>
+          <Endpoint>DELETE /users/{userId}</Endpoint>
+          <Method>DELETE</Method>
+          <Description>Delete user account</Description>
+          <Authentication>Cognito JWT</Authentication>
+        </API>
+        <API>
+          <Endpoint>POST /users/password-reset</Endpoint>
+          <Method>POST</Method>
+          <Description>Initiate password reset</Description>
+          <Authentication>None (public)</Authentication>
+        </API>
+      </APIs>
+      <DataStores>
+        <DataStore>
+          <Type>DynamoDB</Type>
+          <Name>users-table</Name>
+          <Purpose>User profiles and preferences</Purpose>
+          <Schema>PK: userId, SK: PROFILE, attributes: email, name, preferences, createdAt, updatedAt</Schema>
+        </DataStore>
+        <DataStore>
+          <Type>DynamoDB</Type>
+          <Name>sessions-table</Name>
+          <Purpose>Active user sessions</Purpose>
+          <Schema>PK: sessionId, attributes: userId, expiresAt (TTL), createdAt, ipAddress</Schema>
+        </DataStore>
+        <DataStore>
+          <Type>Cognito User Pool</Type>
+          <Name>user-pool</Name>
+          <Purpose>Authentication and JWT token management</Purpose>
+        </DataStore>
+      </DataStores>
+      <Events>
+        <EventPublished>
+          <Name>UserRegistered</Name>
+          <Schema>userId, email, registeredAt</Schema>
+          <Target>EventBridge</Target>
+        </EventPublished>
+        <EventPublished>
+          <Name>UserProfileUpdated</Name>
+          <Schema>userId, updatedFields, updatedAt</Schema>
+          <Target>EventBridge</Target>
+        </EventPublished>
+        <EventPublished>
+          <Name>UserDeleted</Name>
+          <Schema>userId, deletedAt</Schema>
+          <Target>EventBridge</Target>
+        </EventPublished>
+      </Events>
+      <Dependencies>
+        <Dependency>Secrets Manager for database credentials</Dependency>
+        <Dependency>SES for email notifications</Dependency>
+        <Dependency>CloudWatch for logging and metrics</Dependency>
+      </Dependencies>
+    </Service>
+
+    <Service id="SVC-002">
+      <Name>Product Catalog Service</Name>
+      <Description>Manages product information, categories, inventory, and search functionality</Description>
+      <Responsibilities>
+        <Responsibility>Product CRUD operations</Responsibility>
+        <Responsibility>Product categorization and taxonomy</Responsibility>
+        <Responsibility>Product search and filtering</Responsibility>
+        <Responsibility>Inventory tracking and updates</Responsibility>
+        <Responsibility>Product image management</Responsibility>
+        <Responsibility>Product pricing management</Responsibility>
+      </Responsibilities>
+      <APIs>
+        <API>
+          <Endpoint>GET /products</Endpoint>
+          <Method>GET</Method>
+          <Description>List products with pagination and filtering</Description>
+          <Authentication>Optional Cognito JWT</Authentication>
+        </API>
+        <API>
+          <Endpoint>GET /products/{productId}</Endpoint>
+          <Method>GET</Method>
+          <Description>Retrieve product details</Description>
+          <Authentication>Optional Cognito JWT</Authentication>
+        </API>
+        <API>
+          <Endpoint>POST /products</Endpoint>
+          <Method>POST</Method>
+          <Description>Create new product</Description>
+          <Authentication>Cognito JWT (admin)</Authentication>
+        </API>
+        <API>
+          <Endpoint>PUT /products/{productId}</Endpoint>
+          <Method>PUT</Method>
+          <Description>Update product details</Description>
+          <Authentication>Cognito JWT (admin)</Authentication>
+        </API>
+        <API>
+          <Endpoint>DELETE /products/{productId}</Endpoint>
+          <Method>DELETE</Method>
+          <Description>Delete product</Description>
+          <Authentication>Cognito JWT (admin)</Authentication>
+        </API>
+        <API>
+          <Endpoint>GET /products/search</Endpoint>
+          <Method>GET</Method>
+          <Description>Search products by keyword</Description>
+          <Authentication>Optional Cognito JWT</Authentication>
+        </API>
+        <API>
+          <Endpoint>PUT /products/{productId}/inventory</Endpoint>
+          <Method>PUT</Method>
+          <Description>Update product inventory</Description>
+          <Authentication>Cognito JWT (admin)</Authentication>
+        </API>
+      </APIs>
+      <DataStores>
+        <DataStore>
+          <Type>Aurora Serverless v2 PostgreSQL</Type>
+          <Name>product-catalog-db</Name>
+          <Purpose>Product master data with ACID guarantees</Purpose>
+          <Schema>Tables: products, categories, inventory, pricing</Schema>
+        </DataStore>
+        <DataStore>
+          <Type>DynamoDB</Type>
+          <Name>product-read-model</Name>
+          <Purpose>Optimized read model for queries</Purpose>
+          <Schema>PK: productId, SK: DETAIL, GSI: category-index, search-index</Schema>
+        </DataStore>
+        <DataStore>
+          <Type>DynamoDB DAX</Type>
+          <Name>product-cache</Name>
+          <Purpose>Accelerate hot product reads</Purpose>
+        </DataStore>
+        <DataStore>
+          <Type>S3</Type>
+          <Name>product-images-bucket</Name>
+          <Purpose>Product image storage</Purpose>
+        </DataStore>
+        <DataStore>
+          <Type>CloudFront</Type>
+          <Name>product-images-cdn</Name>
+          <Purpose>Image delivery with caching</Purpose>
+        </DataStore>
+      </DataStores>
+      <Events>
+        <EventPublished>
+          <Name>ProductCreated</Name>
+          <Schema>productId, name, category, price, createdAt</Schema>
+          <Target>EventBridge</Target>
+        </EventPublished>
+        <EventPublished>

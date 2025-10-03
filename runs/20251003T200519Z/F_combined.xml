@@ -1,0 +1,118 @@
+```xml
+<ArchitectureSpec version="1.0">
+  <Context>
+    <AppName>CloudModernizationPipeline</AppName>
+    <BusinessCapabilities>application-migration,infrastructure-provisioning,architecture-compilation,deployment-automation</BusinessCapabilities>
+    <Criticality>high</Criticality>
+  </Context>
+
+  <Decisions>
+    <DomainStyle>modular monolith</DomainStyle>
+    <IntegrationStyle>event-driven</IntegrationStyle>
+    <Runtime>python</Runtime>
+    <DataTier>dynamodb,aurora-serverless-v2,s3</DataTier>
+    <InfraBaseline>serverless</InfraBaseline>
+  </Decisions>
+
+  <Patterns>
+    <Pattern name="strangler-fig" rationale="Incremental migration from monolith to cloud; allows parallel operation and gradual cutover with minimal risk"/>
+    <Pattern name="api-gateway" rationale="Centralized entry point for REST APIs; handles auth, throttling, and request routing to Lambda functions"/>
+    <Pattern name="event-sourcing" rationale="Capture architecture decisions and IaC operations as immutable events in S3 for audit and replay"/>
+    <Pattern name="outbox" rationale="Ensure reliable event publishing from transactional operations using DynamoDB streams to EventBridge"/>
+    <Pattern name="circuit-breaker" rationale="Protect downstream IaC agents and cloud APIs from cascading failures during provisioning"/>
+    <Pattern name="cqrs" rationale="Separate read models (DynamoDB) for fast queries from write models (Aurora) for complex architecture compilation"/>
+    <Pattern name="saga" rationale="Orchestrate multi-step IaC provisioning workflows with compensating transactions for rollback"/>
+    <Pattern name="blue-green-deployment" rationale="Zero-downtime cutover from monolith to cloud services with instant rollback capability"/>
+  </Patterns>
+
+  <NonFunctionals>
+    <Availability target="99.9%"/>
+    <Latency p95_ms="500"/>
+    <Throughput rps="100"/>
+    <Security notes="IAM least-privilege roles per Lambda; Secrets Manager for credentials; KMS encryption at rest; TLS 1.3 in transit; audit logs to CloudWatch"/>
+    <Compliance notes="Retain architecture decisions and IaC operations for 7 years; PII in BRD inputs encrypted; SOC2 audit trail"/>
+    <Observability notes="OTEL instrumentation in Python; structured JSON logs to CloudWatch; X-Ray tracing for request flows; custom metrics for compilation success rate"/>
+    <CostGuardrails notes="Lambda provisioned concurrency off by default; DynamoDB on-demand billing; Aurora auto-pause after 5min idle; S3 Intelligent-Tiering"/>
+  </NonFunctionals>
+
+  <Services>
+    <Service name="ArchitectureCompiler" domain="compilation">
+      <APIs>
+        <API name="CompileArchitecture" protocol="REST" auth="IAM" sync_or_async="sync"/>
+        <API name="ValidateSpec" protocol="REST" auth="IAM" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="dynamodb" purpose="store compiled architecture specs with fast lookup by appName"/>
+        <Store type="s3" purpose="archive raw BRD inputs and generated XML specs for audit"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="topic" name="ArchitectureCompiled" purpose="notify IaC agent when new spec is ready"/>
+      </QueuesTopics>
+    </Service>
+    <Service name="IaCProvisioner" domain="infrastructure">
+      <APIs>
+        <API name="ProvisionInfrastructure" protocol="REST" auth="IAM" sync_or_async="async"/>
+        <API name="GetProvisioningStatus" protocol="REST" auth="IAM" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="aurora-serverless-v2" purpose="track provisioning state, dependencies, and rollback plans"/>
+        <Store type="s3" purpose="store Terraform state files and execution logs"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="queue" name="ProvisioningTasks" purpose="queue IaC operations for async execution with retry"/>
+        <Channel type="topic" name="ProvisioningComplete" purpose="notify downstream systems of infrastructure readiness"/>
+      </QueuesTopics>
+    </Service>
+    <Service name="MigrationOrchestrator" domain="migration">
+      <APIs>
+        <API name="InitiateMigration" protocol="REST" auth="IAM" sync_or_async="async"/>
+        <API name="ExecuteCutover" protocol="REST" auth="IAM" sync_or_async="async"/>
+        <API name="Rollback" protocol="REST" auth="IAM" sync_or_async="async"/>
+      </APIs>
+      <DataStores>
+        <Store type="dynamodb" purpose="track migration phases, cutover status, and traffic routing rules"/>
+        <Store type="s3" purpose="store migration runbooks and rollback snapshots"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="queue" name="MigrationSteps" purpose="queue saga steps for strangler-fig migration"/>
+        <Channel type="topic" name="CutoverEvents" purpose="broadcast cutover and rollback events to monitoring"/>
+      </QueuesTopics>
+    </Service>
+    <Service name="ObservabilityCollector" domain="monitoring">
+      <APIs>
+        <API name="IngestMetrics" protocol="REST" auth="IAM" sync_or_async="async"/>
+      </APIs>
+      <DataStores>
+        <Store type="s3" purpose="long-term storage of traces and structured logs"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="queue" name="MetricsQueue" purpose="buffer high-volume telemetry data"/>
+      </QueuesTopics>
+    </Service>
+  </Services>
+
+  <Constraints>
+    <Must>Use Python 3.11 runtime for all Lambda functions; encrypt all data at rest with KMS; use IAM roles for service-to-service auth; provision via Terraform only</Must>
+    <Should>Implement idempotency keys for all write operations; use DynamoDB streams for event publishing; enable X-Ray tracing on all services; set Lambda reserved concurrency limits</Should>
+    <MustNot>Use EC2 or ECS for compute; store secrets in code or environment variables; allow public internet access to data stores; exceed $5000 monthly cost in MVP phase</MustNot>
+  </Constraints>
+
+  <CloudMapping provider="AWS">
+    <Compute>Lambda functions (Python 3.11 runtime) for ArchitectureCompiler, IaCProvisioner, MigrationOrchestrator, ObservabilityCollector; Step Functions for saga orchestration in migration workflows</Compute>
+    <Networking>API Gateway REST APIs with IAM authorizers; VPC endpoints for private access to DynamoDB and S3; PrivateLink for Aurora Serverless v2 in isolated subnets; CloudFront for static content caching</Networking>
+    <Data>DynamoDB tables (on-demand) for specs and migration state; Aurora Serverless v2 PostgreSQL (min 0.5 ACU, max 2 ACU) for provisioning state; S3 buckets with Intelligent-Tiering for BRDs, specs, Terraform state, logs</Data>
+    <Messaging>EventBridge event bus for ArchitectureCompiled, ProvisioningComplete, CutoverEvents; SQS standard queues for ProvisioningTasks, MigrationSteps, MetricsQueue with DLQ and 3 retries</Messaging>
+    <Identity>IAM roles per Lambda with least-privilege policies; Secrets Manager for third-party API keys; KMS customer-managed keys for encryption; Cognito user pool for human admin access to APIs</Identity>
+  </CloudMapping>
+
+  <Risks>
+    <Risk item="DynamoDB eventual consistency may cause stale reads during rapid architecture updates" mitigation="Use strongly consistent reads for critical queries; implement optimistic locking with version attributes"/>
+    <Risk item="Aurora Serverless v2 cold start latency up to 30s impacts p95 latency target" mitigation="Keep one reader instance warm with scheduled Lambda pings; cache frequent queries in DynamoDB"/>
+    <Risk item="Lambda 15min timeout insufficient for large Terraform apply operations" mitigation="Use Step Functions for long-running workflows; split large plans into smaller modules; implement checkpointing"/>
+    <Risk item="EventBridge at-least-once delivery may cause duplicate IaC operations" mitigation="Implement idempotency using DynamoDB conditional writes with operation IDs; use Terraform state locking"/>
+    <Risk item="Strangler-fig dual-write to monolith and cloud risks data inconsistency" mitigation="Implement outbox pattern with DynamoDB streams; use CDC from monolith DB; validate with reconciliation jobs"/>
+    <Risk item="Cost overrun if DynamoDB or Lambda scale beyond MVP guardrails" mitigation="Set CloudWatch billing alarms at $4000; use Lambda reserved concurrency caps; enable DynamoDB auto-scaling limits"/>
+    <Risk item="Terraform state file corruption in S3 breaks IaC pipeline" mitigation="Enable S3 versioning and replication to second region; use DynamoDB for state locking; automated daily backups"/>
+  </Risks>
+</ArchitectureSpec>
+```

@@ -1,0 +1,134 @@
+```xml
+<ArchitectureSpec version="1.0">
+  <Context>
+    <AppName>Enterprise Architecture Patterns Compiler</AppName>
+    <BusinessCapabilities>Architecture Pattern Compilation, BRD Processing, Guardrail Validation, XML Schema Generation, Decision Automation</BusinessCapabilities>
+    <Criticality>medium</Criticality>
+  </Context>
+
+  <Decisions>
+    <DomainStyle>modular monolith</DomainStyle>
+    <IntegrationStyle>event-driven</IntegrationStyle>
+    <Runtime>python</Runtime>
+    <DataTier>dynamodb, aurora-serverless-v2, s3</DataTier>
+    <InfraBaseline>serverless</InfraBaseline>
+  </Decisions>
+
+  <Patterns>
+    <Pattern name="Event-Driven Architecture" rationale="Decouple BRD ingestion from processing and output generation; enables async workflows and scalability" />
+    <Pattern name="CQRS" rationale="Separate read models for pattern lookups from write models for decision compilation; optimizes for different access patterns" />
+    <Pattern name="Saga Pattern" rationale="Coordinate multi-step compilation workflow (parse, validate, decide, generate) with compensating transactions" />
+    <Pattern name="Circuit Breaker" rationale="Protect against cascading failures when external schema validation or guardrail checks fail" />
+    <Pattern name="Strangler Fig" rationale="Allow incremental migration from manual architecture decisions to automated compilation" />
+    <Pattern name="API Gateway Pattern" rationale="Single entry point for BRD submission with rate limiting, auth, and request validation" />
+    <Pattern name="Idempotency Pattern" rationale="Ensure repeated BRD submissions with same ID produce consistent outputs without duplication" />
+    <Pattern name="Outbox Pattern" rationale="Guarantee event publishing when compilation completes by storing events alongside state changes" />
+  </Patterns>
+
+  <NonFunctionals>
+    <Availability target="99.9%"/>
+    <Latency p95_ms="2000"/>
+    <Throughput rps="100"/>
+    <Security notes="IAM role-based access; KMS encryption at rest for all data stores; Secrets Manager for external integrations; API Gateway with IAM or Cognito auth; least-privilege service roles"/>
+    <Compliance notes="Audit trail for all architecture decisions; immutable event log in S3; data retention policies aligned with enterprise governance"/>
+    <Observability notes="CloudWatch Logs with structured JSON; OTEL tracing across Lambda invocations; custom metrics for compilation success rate, latency, and guardrail violations; X-Ray for distributed tracing"/>
+    <CostGuardrails notes="Lambda provisioned concurrency only for critical paths; DynamoDB on-demand billing; Aurora Serverless v2 auto-scaling with min capacity 0.5 ACU; S3 Intelligent-Tiering; EventBridge pay-per-event; budget alerts at 80% threshold"/>
+  </NonFunctionals>
+
+  <Services>
+    <Service name="BRDIngestionService" domain="input">
+      <APIs>
+        <API name="SubmitBRD" protocol="REST" auth="IAM" sync_or_async="sync"/>
+        <API name="GetCompilationStatus" protocol="REST" auth="IAM" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="object-storage" purpose="Raw BRD document storage and versioning"/>
+        <Store type="kv-store" purpose="Submission metadata and status tracking"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="topic" name="BRDSubmittedEvent" purpose="Notify downstream services of new BRD submission"/>
+      </QueuesTopics>
+    </Service>
+
+    <Service name="GuardrailValidationService" domain="validation">
+      <APIs>
+        <API name="ValidateGuardrails" protocol="internal" auth="IAM" sync_or_async="async"/>
+      </APIs>
+      <DataStores>
+        <Store type="relational" purpose="Guardrail rules repository with versioning"/>
+        <Store type="kv-store" purpose="Validation results cache"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="queue" name="ValidationQueue" purpose="Process validation requests with retry logic"/>
+        <Channel type="topic" name="ValidationCompletedEvent" purpose="Signal validation outcome"/>
+      </QueuesTopics>
+    </Service>
+
+    <Service name="PatternDecisionService" domain="core">
+      <APIs>
+        <API name="CompileArchitecture" protocol="internal" auth="IAM" sync_or_async="async"/>
+      </APIs>
+      <DataStores>
+        <Store type="relational" purpose="Pattern catalog with decision trees and rationale templates"/>
+        <Store type="kv-store" purpose="Compilation state and intermediate decisions"/>
+        <Store type="object-storage" purpose="Decision audit trail and lineage"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="queue" name="CompilationQueue" purpose="Process architecture compilation requests"/>
+        <Channel type="topic" name="DecisionMadeEvent" purpose="Publish individual pattern decisions"/>
+      </QueuesTopics>
+    </Service>
+
+    <Service name="XMLGenerationService" domain="output">
+      <APIs>
+        <API name="GenerateXML" protocol="internal" auth="IAM" sync_or_async="async"/>
+        <API name="DownloadArchitectureSpec" protocol="REST" auth="IAM" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="object-storage" purpose="Generated XML artifacts with versioning"/>
+        <Store type="kv-store" purpose="Generation job status and metadata"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="queue" name="GenerationQueue" purpose="Process XML generation requests"/>
+        <Channel type="topic" name="SpecGeneratedEvent" purpose="Notify completion and trigger downstream workflows"/>
+      </QueuesTopics>
+    </Service>
+
+    <Service name="OrchestrationService" domain="workflow">
+      <APIs>
+        <API name="ExecuteCompilationWorkflow" protocol="internal" auth="IAM" sync_or_async="async"/>
+      </APIs>
+      <DataStores>
+        <Store type="kv-store" purpose="Workflow state and execution history"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="topic" name="WorkflowEventBus" purpose="Coordinate saga steps across services"/>
+      </QueuesTopics>
+    </Service>
+  </Services>
+
+  <Constraints>
+    <Must>Use Python 3.11 for all Lambda functions; encrypt all data at rest with KMS; implement idempotency for all state-changing operations; use Terraform for all infrastructure; emit structured logs in JSON format; implement distributed tracing with OTEL</Must>
+    <Should>Minimize cold start latency with Lambda SnapStart where applicable; use DynamoDB single-table design for related entities; implement graceful degradation when non-critical services fail; cache frequently accessed patterns and guardrails; use API Gateway request validation</Should>
+    <MustNot>Use provisioned capacity without explicit cost justification; store sensitive data in logs; implement synchronous cross-service calls for non-critical paths; exceed 15-minute Lambda execution time; use deprecated AWS services</MustNot>
+  </Constraints>
+
+  <CloudMapping provider="AWS">
+    <Compute>Lambda functions (Python 3.11 runtime) for all service logic; Step Functions for orchestration workflows; Lambda SnapStart for latency-sensitive functions</Compute>
+    <Networking>API Gateway REST API with IAM authorizer; VPC endpoints for private Aurora access; CloudFront for static content delivery if UI added</Networking>
+    <Data>DynamoDB tables with on-demand billing for metadata and state; Aurora Serverless v2 PostgreSQL for relational pattern catalog; S3 buckets with versioning and Intelligent-Tiering for documents and events; ElastiCache for Redis (optional) for hot pattern cache</Data>
+    <Messaging>EventBridge event bus for domain events; SQS standard queues for work distribution with DLQ; SNS topics for fan-out notifications</Messaging>
+    <Identity>IAM roles and policies for service-to-service auth; Secrets Manager for external credentials; KMS customer-managed keys for encryption; Cognito (future) for user authentication</Identity>
+  </CloudMapping>
+
+  <Risks>
+    <Risk item="No explicit BRD format specified in requirements" mitigation="Support multiple input formats (JSON, YAML, plain text) with content-type detection; add schema validation layer"/>
+    <Risk item="Pattern catalog completeness not defined" mitigation="Start with core 20 patterns; implement feedback loop for pattern suggestions; version catalog with semantic versioning"/>
+    <Risk item="Aurora Serverless v2 cold start latency for infrequent access" mitigation="Set minimum capacity to 0.5 ACU; implement connection pooling with RDS Proxy; cache frequent queries in DynamoDB"/>
+    <Risk item="Lambda 15-minute timeout may be insufficient for complex compilations" mitigation="Implement chunked processing with Step Functions; add timeout monitoring and alerts; optimize pattern matching algorithms"/>
+    <Risk item="EventBridge cross-region limitations for future multi-region" mitigation="Design event schema for cross-region replication; document migration path to multi-region event bus"/>
+    <Risk item="DynamoDB single-table design complexity" mitigation="Use established access patterns; implement comprehensive integration tests; document entity relationship model"/>
+    <Risk item="Cost unpredictability with on-demand pricing at scale" mitigation="Implement CloudWatch billing alarms; analyze access patterns after 3 months for provisioned capacity evaluation; set API Gateway throttling limits"/>
+  </Risks>
+</ArchitectureSpec>
+```

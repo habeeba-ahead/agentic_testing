@@ -1,0 +1,23 @@
+```json
+{
+  "ranking": [
+    {
+      "prompt": "prompt_a",
+      "score": 92,
+      "reasons": "Perfect guardrail alignment, explicit IaC-ready CloudMapping with ARN patterns, comprehensive NonFunctionals with numeric targets, detailed risk mitigations"
+    },
+    {
+      "prompt": "prompt_b",
+      "score": 78,
+      "reasons": "Good guardrail adherence, solid CloudMapping but less granular than A, NonFunctionals present but some targets vague, risks identified but mitigations less detailed"
+    },
+    {
+      "prompt": "prompt_c",
+      "score": 65,
+      "reasons": "Partial guardrail compliance with unexplained deviations, CloudMapping exists but lacks provisioning detail, NonFunctionals incomplete, risk section generic"
+    }
+  ],
+  "winner": "prompt_a",
+  "notes": "prompt_a delivers production-ready IaC mappability with explicit resource types, ARN patterns, and Terraform-friendly structure; guardrails fully honored with serverless-first approach; NonFunctionals quantified; risks concrete with mitigations"
+}
+```

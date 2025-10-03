@@ -1,0 +1,214 @@
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<architecture_spec>
+  <metadata>
+    <project>Architecture Specification</project>
+    <version>1.0</version>
+    <status>draft</status>
+    <last_updated>2024-01-01</last_updated>
+  </metadata>
+
+  <business_context>
+    <problem_statement>No BRD provided - generating baseline serverless architecture template aligned with guardrails</problem_statement>
+    <success_criteria>
+      <criterion id="SC1">Serverless-first architecture deployed on AWS</criterion>
+      <criterion id="SC2">Cost-optimized with minimal idle resource consumption</criterion>
+      <criterion id="SC3">Observable system with structured logging and tracing</criterion>
+    </success_criteria>
+  </business_context>
+
+  <system_overview>
+    <description>Baseline serverless architecture on AWS using Python 3.11 runtime with managed services for compute, storage, and messaging</description>
+    <architecture_style>Event-driven serverless microservices</architecture_style>
+    <deployment_model>Cloud-native AWS serverless</deployment_model>
+  </system_overview>
+
+  <stakeholders>
+    <stakeholder id="STK1">
+      <name>Development Team</name>
+      <role>Implementation and maintenance</role>
+      <concerns>Developer experience, deployment velocity, observability</concerns>
+    </stakeholder>
+    <stakeholder id="STK2">
+      <name>Operations Team</name>
+      <role>System reliability and monitoring</role>
+      <concerns>Uptime, performance, cost management</concerns>
+    </stakeholder>
+  </stakeholders>
+
+  <requirements>
+    <functional>
+      <requirement id="FR1" priority="high">
+        <description>API endpoint exposure via API Gateway</description>
+        <rationale>Standard REST API access pattern</rationale>
+      </requirement>
+      <requirement id="FR2" priority="high">
+        <description>Asynchronous event processing via EventBridge</description>
+        <rationale>Decoupled event-driven architecture</rationale>
+      </requirement>
+      <requirement id="FR3" priority="medium">
+        <description>Work queue processing via SQS</description>
+        <rationale>Reliable task processing with retry capabilities</rationale>
+      </requirement>
+    </functional>
+
+    <non_functional>
+      <performance>
+        <requirement id="NFR-P1">API response time p95 &lt; 500ms for synchronous operations</requirement>
+        <requirement id="NFR-P2">Event processing latency &lt; 2s for async workflows</requirement>
+        <requirement id="NFR-P3">Support auto-scaling from 0 to handle traffic spikes</requirement>
+      </performance>
+      <scalability>
+        <requirement id="NFR-S1">Horizontal scaling via Lambda concurrency (up to 1000 concurrent executions)</requirement>
+        <requirement id="NFR-S2">DynamoDB on-demand scaling for unpredictable workloads</requirement>
+        <requirement id="NFR-S3">Aurora Serverless v2 auto-scaling between 0.5-16 ACUs</requirement>
+      </scalability>
+      <availability>
+        <requirement id="NFR-A1">99.9% uptime SLA for API endpoints</requirement>
+        <requirement id="NFR-A2">Multi-AZ deployment for data persistence layers</requirement>
+        <requirement id="NFR-A3">Graceful degradation with circuit breaker patterns</requirement>
+      </availability>
+      <security>
+        <requirement id="NFR-SEC1">IAM role-based access control for all service interactions</requirement>
+        <requirement id="NFR-SEC2">Secrets stored in AWS Secrets Manager with automatic rotation</requirement>
+        <requirement id="NFR-SEC3">Data encryption at rest using KMS customer-managed keys</requirement>
+        <requirement id="NFR-SEC4">Data encryption in transit using TLS 1.3</requirement>
+        <requirement id="NFR-SEC5">API authentication via IAM or JWT tokens</requirement>
+      </security>
+      <observability>
+        <requirement id="NFR-O1">Structured JSON logging to CloudWatch Logs with correlation IDs</requirement>
+        <requirement id="NFR-O2">Distributed tracing via OpenTelemetry with X-Ray backend</requirement>
+        <requirement id="NFR-O3">Custom CloudWatch metrics for business KPIs</requirement>
+        <requirement id="NFR-O4">Alerting on error rates, latency thresholds, and cost anomalies</requirement>
+      </observability>
+      <maintainability>
+        <requirement id="NFR-M1">Infrastructure as Code using Terraform with modular design</requirement>
+        <requirement id="NFR-M2">Automated deployment pipelines with rollback capabilities</requirement>
+        <requirement id="NFR-M3">Python 3.11 runtime with type hints and linting standards</requirement>
+      </maintainability>
+      <cost>
+        <requirement id="NFR-C1">Serverless-first to minimize idle costs (scale to zero)</requirement>
+        <requirement id="NFR-C2">DynamoDB on-demand billing for variable workloads</requirement>
+        <requirement id="NFR-C3">S3 Intelligent-Tiering for log and event storage</requirement>
+        <requirement id="NFR-C4">Lambda memory optimization based on profiling</requirement>
+        <requirement id="NFR-C5">Cost monitoring with budget alerts at $500/month threshold</requirement>
+      </cost>
+    </non_functional>
+  </requirements>
+
+  <architectural_decisions>
+    <decision id="AD1">
+      <title>Serverless-first compute strategy</title>
+      <status>accepted</status>
+      <context>Need cost-effective compute that scales to zero during idle periods</context>
+      <decision>Use AWS Lambda for all compute workloads with Python 3.11 runtime</decision>
+      <rationale>Eliminates idle costs, automatic scaling, pay-per-use pricing model</rationale>
+      <consequences>Cold start latency, 15-minute execution limit, stateless design required</consequences>
+      <alternatives_considered>ECS Fargate (higher idle costs), EC2 (operational overhead)</alternatives_considered>
+    </decision>
+
+    <decision id="AD2">
+      <title>Polyglot persistence strategy</title>
+      <status>accepted</status>
+      <context>Different data access patterns require optimized storage solutions</context>
+      <decision>DynamoDB for high-write KV operations, Aurora Serverless v2 for relational data, S3 for events/logs</decision>
+      <rationale>Match storage technology to access patterns for cost and performance optimization</rationale>
+      <consequences>Multiple data stores increase complexity, require data consistency strategies</consequences>
+      <alternatives_considered>Single RDS instance (higher cost, less optimized), DocumentDB (not in guardrails)</alternatives_considered>
+    </decision>
+
+    <decision id="AD3">
+      <title>Event-driven architecture with EventBridge</title>
+      <status>accepted</status>
+      <context>Need decoupled, scalable async communication between services</context>
+      <decision>EventBridge as primary event bus with schema registry, SQS for work queues</decision>
+      <rationale>Native AWS integration, content-based routing, schema validation, replay capabilities</rationale>
+      <consequences>Eventual consistency, distributed tracing complexity, event versioning required</consequences>
+      <alternatives_considered>SNS/SQS only (less routing flexibility), Kinesis (over-engineered for MVP)</alternatives_considered>
+    </decision>
+
+    <decision id="AD4">
+      <title>API Gateway for REST endpoints</title>
+      <status>accepted</status>
+      <context>Need managed API layer with authentication and throttling</context>
+      <decision>API Gateway REST API with Lambda proxy integration</decision>
+      <rationale>Managed service, built-in throttling, request validation, AWS WAF integration</rationale>
+      <consequences>Additional latency (~50ms), cost per request, vendor lock-in</consequences>
+      <alternatives_considered>ALB + Lambda (more complex), AppSync (GraphQL not required)</alternatives_considered>
+    </decision>
+
+    <decision id="AD5">
+      <title>OpenTelemetry for observability</title>
+      <status>accepted</status>
+      <context>Need vendor-neutral observability with distributed tracing</context>
+      <decision>OTEL SDK in Lambda functions, CloudWatch as backend, X-Ray for traces</decision>
+      <rationale>Standard instrumentation, future portability, rich context propagation</rationale>
+      <consequences>Additional Lambda cold start time, library dependencies, learning curve</consequences>
+      <alternatives_considered>CloudWatch only (limited tracing), X-Ray SDK directly (vendor lock-in)</alternatives_considered>
+    </decision>
+
+    <decision id="AD6">
+      <title>Terraform for Infrastructure as Code</title>
+      <status>accepted</status>
+      <context>Need repeatable, version-controlled infrastructure provisioning</context>
+      <decision>Terraform with AWS provider, state in S3 with DynamoDB locking</decision>
+      <rationale>Multi-cloud capability, mature ecosystem, declarative syntax, plan/apply workflow</rationale>
+      <consequences>State management complexity, potential drift, requires CI/CD integration</consequences>
+      <alternatives_considered>CloudFormation (AWS-only), CDK (requires TypeScript/Python expertise)</alternatives_considered>
+    </decision>
+
+    <decision id="AD7">
+      <title>Security-first design with IAM and KMS</title>
+      <status>accepted</status>
+      <context>Need defense-in-depth security posture</context>
+      <decision>Least-privilege IAM roles, KMS CMKs for encryption, Secrets Manager for credentials</decision>
+      <rationale>Zero-trust principles, audit trail, compliance readiness, automatic rotation</rationale>
+      <consequences>IAM policy complexity, KMS costs, key management overhead</consequences>
+      <alternatives_considered>AWS-managed keys (less control), environment variables (insecure)</alternatives_considered>
+    </decision>
+  </architectural_decisions>
+
+  <system_architecture>
+    <architectural_patterns>
+      <pattern>Event-Driven Architecture</pattern>
+      <pattern>Microservices</pattern>
+      <pattern>CQRS (Command Query Responsibility Segregation)</pattern>
+      <pattern>API Gateway Pattern</pattern>
+      <pattern>Strangler Fig (for future migrations)</pattern>
+    </architectural_patterns>
+
+    <components>
+      <component id="COMP1">
+        <name>API Gateway Layer</name>
+        <type>managed_service</type>
+        <technology>AWS API Gateway REST</technology>
+        <responsibility>HTTP request routing, authentication, throttling, request/response transformation</responsibility>
+        <interfaces>
+          <interface type="REST">HTTPS endpoints for client applications</interface>
+        </interfaces>
+        <dependencies>
+          <dependency>Lambda functions (backend integration)</dependency>
+          <dependency>CloudWatch (logging and metrics)</dependency>
+          <dependency>WAF (security filtering)</dependency>
+        </dependencies>
+        <nfr_mapping>NFR-P1, NFR-A1, NFR-SEC5</nfr_mapping>
+      </component>
+
+      <component id="COMP2">
+        <name>Compute Layer</name>
+        <type>serverless_compute</type>
+        <technology>AWS Lambda (Python 3.11)</technology>
+        <responsibility>Business logic execution, data processing, event handling</responsibility>
+        <interfaces>
+          <interface type="sync">API Gateway proxy integration</interface>
+          <interface type="async">EventBridge event targets</interface>
+          <interface type="async">SQS queue consumers</interface>
+        </interfaces>
+        <dependencies>
+          <dependency>DynamoDB (data access)</dependency>
+          <dependency>Aurora Serverless v2 (relational queries)</dependency>
+          <dependency>S3 (object storage)</dependency>
+          <dependency>Secrets Manager (credentials)</dependency>
+          <dependency>EventBridge (event publishing)</dependency>
+        </dependencies>
+        <nfr_mapping>NFR-P1, NFR-P2

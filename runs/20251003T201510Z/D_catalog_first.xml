@@ -1,0 +1,307 @@
+xml
+<ArchitectureSpec>
+  <Metadata>
+    <ProjectName>Monolith Java Application Cloud Migration and Modernization</ProjectName>
+    <SourceRepository>https://github.com/jszlenk/Monolith-Training.git</SourceRepository>
+    <TargetCloud>AWS</TargetCloud>
+    <Runtime>Python 3.11</Runtime>
+    <IaC>Terraform</IaC>
+  </Metadata>
+
+  <DomainStyle>
+    <Selected>microservices</Selected>
+    <Rationale>BRD explicitly requires extraction of monolith into independent services (User Management BR-001, Product Catalog BR-002, Order Processing BR-003) with independent scaling and deployment capabilities</Rationale>
+  </DomainStyle>
+
+  <IntegrationStyle>
+    <Primary>event-driven</Primary>
+    <Secondary>REST</Secondary>
+    <Rationale>Order Processing (BR-003) requires event-driven architecture for reliability and real-time tracking. REST via API Gateway (BR-005) for synchronous client-facing operations. EventBridge and SQS per guardrails.</Rationale>
+  </IntegrationStyle>
+
+  <InfraBaseline>
+    <Selected>serverless</Selected>
+    <Rationale>Guardrails mandate serverless-first approach to cap idle costs and leverage managed services. Supports auto-scaling requirements (BR-013) and cost optimization (BR-016).</Rationale>
+  </InfraBaseline>
+
+  <DataTier>
+    <Primary>dynamodb</Primary>
+    <Secondary>aurora</Secondary>
+    <Rationale>DynamoDB for high-write session management (BR-006), product catalog (BR-002), and user profiles. Aurora Serverless v2 for order processing (BR-003) requiring ACID transactions and relational integrity per guardrails.</Rationale>
+  </DataTier>
+
+  <Patterns>
+    <Pattern name="api-gateway">
+      <Requirement>BR-005</Requirement>
+      <Implementation>AWS API Gateway for unified service access, authentication, rate limiting, and request transformation</Implementation>
+    </Pattern>
+    <Pattern name="circuit-breaker">
+      <Requirement>BR-010, CFR-001</Requirement>
+      <Implementation>Prevent cascade failures in service-to-service communication, ensure 99.9% uptime SLA</Implementation>
+    </Pattern>
+    <Pattern name="cache-aside">
+      <Requirement>BR-012</Requirement>
+      <Implementation>Distributed caching with ElastiCache/DynamoDB DAX for 70% cache hit ratio, 50% response time improvement</Implementation>
+    </Pattern>
+    <Pattern name="outbox">
+      <Requirement>BR-003, BR-004</Requirement>
+      <Implementation>Ensure reliable event publishing from order service with transactional guarantees, maintain audit trail</Implementation>
+    </Pattern>
+    <Pattern name="saga">
+      <Requirement>BR-003</Requirement>
+      <Implementation>Distributed transaction management for order processing workflow across payment, inventory, and fulfillment services</Implementation>
+    </Pattern>
+    <Pattern name="cqrs">
+      <Requirement>BR-002, BR-012</Requirement>
+      <Implementation>Separate read/write models for product catalog to optimize query performance and enable caching strategy</Implementation>
+    </Pattern>
+  </Patterns>
+
+  <Observability>
+    <StructuredLogs>
+      <Requirement>BR-007</Requirement>
+      <Implementation>CloudWatch Logs with JSON structured format, centralized aggregation, no sensitive data in plain text per guardrails</Implementation>
+    </StructuredLogs>
+    <Metrics>
+      <Requirement>BR-007, CFR-002</Requirement>
+      <Implementation>CloudWatch Metrics for service health, performance SLAs (500ms API response, 2s page load), auto-scaling triggers</Implementation>
+    </Metrics>
+    <Traces>
+      <Requirement>BR-007, BR-010</Requirement>
+      <Implementation>OpenTelemetry with X-Ray for distributed tracing across microservices, 100ms communication latency monitoring</Implementation>
+    </Traces>
+    <AuditLogs>
+      <Requirement>BR-003, BR-008, CFR-003</Requirement>
+      <Implementation>Immutable audit trail for order changes, security events, compliance (GDPR, PCI DSS), configuration changes</Implementation>
+    </AuditLogs>
+  </Observability>
+
+  <Services>
+    <Service name="UserManagementService">
+      <Requirement>BR-001</Requirement>
+      <Runtime>AWS Lambda (Python 3.11)</Runtime>
+      <DataStore>DynamoDB (user profiles, credentials encrypted at rest via KMS)</DataStore>
+      <API>API Gateway REST endpoints for registration, authentication, CRUD operations</API>
+      <Scaling>Auto-scale to 1000 concurrent users minimum</Scaling>
+      <Performance>500ms response time at 95th percentile</Performance>
+      <Security>IAM authentication, rate limiting, GDPR compliance, Secrets Manager for credentials</Security>
+    </Service>
+
+    <Service name="ProductCatalogService">
+      <Requirement>BR-002</Requirement>
+      <Runtime>AWS Lambda (Python 3.11)</Runtime>
+      <DataStore>DynamoDB (10,000+ SKUs, product metadata) with DAX caching layer</DataStore>
+      <API>API Gateway REST endpoints for product CRUD, search, categorization</API>
+      <Patterns>CQRS for read/write separation, cache-aside for query optimization</Patterns>
+      <Scaling>Independent scaling for catalog operations</Scaling>
+      <Performance>300ms response time for queries</Performance>
+      <Events>Publish product change events to EventBridge for downstream consumers</Events>
+    </Service>
+
+    <Service name="OrderProcessingService">
+      <Requirement>BR-003</Requirement>
+      <Runtime>AWS Lambda (Python 3.11) + Step Functions for workflow orchestration</Runtime>
+      <DataStore>Aurora Serverless v2 PostgreSQL (ACID transactions, order history, financial data)</DataStore>
+      <Messaging>EventBridge for order events, SQS for fulfillment queues</Messaging>
+      <Patterns>Saga for distributed transactions, outbox for reliable event publishing</Patterns>
+      <Scaling>500 orders per minute throughput minimum</Scaling>
+      <Performance>Idempotent operations, state machine for order lifecycle</Performance>
+      <Security>PCI DSS compliance for payment data, encryption in transit/rest, audit trail</Security>
+      <Integration>Payment gateway integration, inventory service coordination</Integration>
+    </Service>
+
+    <Service name="SessionManagementService">
+      <Requirement>BR-006</Requirement>
+      <Runtime>AWS Lambda (Python 3.11)</Runtime>
+      <DataStore>DynamoDB with TTL for session expiration (5000 concurrent sessions)</DataStore>
+      <Patterns>Distributed session store for stateless services</Patterns>
+      <Security>Session data encrypted, session fixation prevention, timeout policies</Security>
+      <Replication>Multi-AZ replication for failover</Replication>
+    </Service>
+
+    <Service name="ConfigurationService">
+      <Requirement>BR-011</Requirement>
+      <Implementation>AWS AppConfig for dynamic configuration management</Implementation>
+      <Features>Environment-specific configs, versioning, rollback, validation, encryption for sensitive values</Features>
+      <Security>IAM-based access control, change approval workflow, audit trail</Security>
+    </Service>
+
+    <Service name="APIGatewayLayer">
+      <Requirement>BR-005</Requirement>
+      <Implementation>AWS API Gateway with custom domain, WAF integration</Implementation>
+      <Features>Authentication/authorization, rate limiting, request/response transformation, API versioning</Features>
+      <Patterns>Circuit breaker via Lambda destinations, timeout policies, input validation</Patterns>
+      <Monitoring>API analytics, request logging, CloudWatch dashboards</Monitoring>
+    </Service>
+  </Services>
+
+  <DataMigration>
+    <Requirement>BR-004, BR-017</Requirement>
+    <Strategy>
+      <Phase1>Schema decomposition and mapping from monolithic database</Phase1>
+      <Phase2>AWS DMS for initial bulk migration to DynamoDB and Aurora</Phase2>
+      <Phase3>CDC replication for incremental sync during parallel run</Phase3>
+      <Phase4>Data validation with checksums, 100% accuracy requirement</Phase4>
+      <Phase5>Cutover with rollback capability, maintain source until validation complete</Phase5>
+    </Strategy>
+    <Validation>Automated reconciliation reports, integrity constraints verification, point-in-time recovery testing</Validation>
+    <Guardrails>Zero data loss, encryption at rest/transit, referential integrity across services, retention policies enforced</Guardrails>
+  </DataMigration>
+
+  <Security>
+    <Requirement>BR-008, CFR-003</Requirement>
+    <Authentication>AWS Cognito for user authentication, IAM for service-to-service</Authentication>
+    <Authorization>Fine-grained IAM policies, principle of least privilege</Authorization>
+    <Encryption>KMS for data at rest, TLS 1.3 for data in transit</Encryption>
+    <Secrets>AWS Secrets Manager for credentials, automatic rotation</Secrets>
+    <Compliance>GDPR for user data, PCI DSS for payment data, audit logs immutable</Compliance>
+    <Scanning>Integrated security scanning in CI/CD, no critical vulnerabilities in production</Scanning>
+    <Network>VPC with private subnets, security groups, NACLs, WAF for API Gateway</Network>
+  </Security>
+
+  <CICD>
+    <Requirement>BR-009</Requirement>
+    <Platform>AWS CodePipeline + CodeBuild</Platform>
+    <Pipeline>
+      <Stage1>Source from GitHub, automated trigger on commit</Stage1>
+      <Stage2>Build with dependency scanning, SAST security checks</Stage2>
+      <Stage3>Unit tests (80% coverage gate), integration tests</Stage3>
+      <Stage4>Deploy to dev/test environments via Terraform</Stage4>
+      <Stage5>Performance and security testing gates</Stage5>
+      <Stage6>Manual approval for production deployment</Stage6>
+      <Stage7>Blue-green deployment with automated rollback on health check failure</Stage7>
+    </Pipeline>
+    <ExecutionTime>30 minutes maximum per guardrails</ExecutionTime>
+    <Guardrails>Code review required, automated testing gates, deployment audit trail, vulnerability scanning</Guardrails>
+  </CICD>
+
+  <DisasterRecovery>
+    <Requirement>BR-014, CFR-001</Requirement>
+    <Strategy>Multi-AZ deployment for high availability, cross-region replication for DR</Strategy>
+    <Backup>Automated backups for Aurora (point-in-time recovery), DynamoDB continuous backups</Backup>
+    <RTO>4 hours maximum</RTO>
+    <RPO>1 hour maximum</RPO>
+    <Failover>Automated failover for Aurora, Route53 health checks for regional failover</Failover>
+    <Testing>Quarterly DR drills, chaos engineering tests for resilience validation</Testing>
+  </DisasterRecovery>
+
+  <Scalability>
+    <Requirement>BR-013, CFR-004</Requirement>
+    <AutoScaling>
+      <Lambda>Concurrent execution limits, reserved concurrency for critical functions</Lambda>
+      <DynamoDB>On-demand capacity mode for variable workloads, provisioned for predictable patterns</DynamoDB>
+      <Aurora>Aurora Serverless v2 auto-scaling based on CPU/connections</Aurora>
+    </AutoScaling>
+    <LoadTesting>Support 3x current peak load, 1000 concurrent users minimum</LoadTesting>
+    <Policies>Scale-up within 2 minutes, gradual scale-down with cooldown periods</Policies>
+    <Guardrails>Minimum instance counts for availability, maximum limits for cost control, cost monitoring alerts</Guardrails>
+  </Scalability>
+
+  <CostManagement>
+    <Requirement>BR-016</Requirement>
+    <Monitoring>AWS Cost Explorer dashboards, budget alerts at 80% threshold</Monitoring>
+    <Tagging>Resource tagging strategy for cost allocation by service and environment</Tagging>
+    <Optimization>Serverless-first to cap idle costs, Lambda right-sizing, DynamoDB on-demand for variable load</Optimization>
+    <Governance>Monthly cost reviews, auto-shutdown for non-production environments, unused resource elimination</Governance>
+    <Reporting>Monthly cost reports by service, cost allocation to business units</Reporting>
+  </CostManagement>
+
+  <Testing>
+    <Requirement>BR-018</Requirement>
+    <UnitTests>80% code coverage minimum, automated in CI/CD pipeline</UnitTests>
+    <IntegrationTests>End-to-end workflow validation across services</IntegrationTests>
+    <PerformanceTests>Load testing for SLA validation (500ms API, 2s page load)</PerformanceTests>
+    <SecurityTests>SAST/DAST scanning, penetration testing, vulnerability assessments</SecurityTests>
+    <ChaosEngineering>AWS Fault Injection Simulator for resilience testing</ChaosEngineering>
+    <UAT>User acceptance testing with business stakeholders before cutover</UAT>
+  </Testing>
+
+  <Cutover>
+    <Requirement>BR-020</Requirement>
+    <Strategy>Phased migration with feature flags for gradual rollout</Strategy>
+    <ParallelRun>Maintain monolith in parallel during validation period</ParallelRun>
+    <Rollback>Automated rollback triggers, tested rollback procedures</Rollback>
+    <Communication>48-hour advance notice for maintenance windows, stakeholder briefings</Communication>
+    <Validation>Automated health checks post-cutover, smoke tests, monitoring dashboards</Validation>
+    <Support>War room during cutover, 24/7 support team, escalation procedures</Support>
+  </Cutover>
+
+  <Risks>
+    <Risk id="R-001">
+      <Description>Distributed transaction complexity in order processing saga pattern</Description>
+      <Mitigation>Step Functions for orchestration, comprehensive testing, rollback mechanisms</Mitigation>
+      <FutureOption>Consider AWS App Mesh for advanced service mesh capabilities if synchronous patterns dominate</FutureOption>
+    </Risk>
+    <Risk id="R-002">
+      <Description>Data consistency across decomposed databases</Description>
+      <Mitigation>Outbox pattern for reliable events, eventual consistency model, compensating transactions</Mitigation>
+      <FutureOption>Evaluate gRPC for lower-latency service communication if REST overhead becomes bottleneck</FutureOption>
+    </Risk>
+    <Risk id="R-003">
+      <Description>Cold start latency for Lambda functions impacting 500ms SLA</Description>
+      <Mitigation>Provisioned concurrency for critical paths, Lambda SnapStart for Python, connection pooling</Mitigation>
+      <FutureOption>Consider ECS Fargate for long-running services if cold starts cannot meet SLA</FutureOption>
+    </Risk>
+    <Risk id="R-004">
+      <Description>DynamoDB cost escalation with high-write workloads</Description>
+      <Mitigation>On-demand capacity mode, cost monitoring alerts, data modeling optimization, TTL for session cleanup</Mitigation>
+      <FutureOption>Evaluate batch processing patterns for non-real-time writes</FutureOption>
+    </Risk>
+    <Risk id="R-005">
+      <Description>EventBridge message ordering and deduplication requirements</Description>
+      <Mitigation>Idempotency keys in consumers, SQS FIFO queues where ordering critical, event versioning</Mitigation>
+      <FutureOption>Consider Amazon MSK (Kafka) if strict ordering and replay capabilities become critical</FutureOption>
+    </Risk>
+    <Risk id="R-006">
+      <Description>Cross-region latency impacting DR failover RTO</Description>
+      <Mitigation>Multi-AZ for HA, Route53 health-based routing, automated failover testing</Mitigation>
+      <FutureOption>Active-active multi-region if RTO requirements tighten below 4 hours</FutureOption>
+    </Risk>
+    <Risk id="R-007">
+      <Description>Migration data validation complexity with 100% accuracy requirement</Description>
+      <Mitigation>Automated reconciliation scripts, checksum validation, parallel run period, phased cutover</Mitigation>
+      <FutureOption>Third-party data validation tools if manual reconciliation becomes bottleneck</FutureOption>
+    </Risk>
+    <Risk id="R-008">
+      <Description>Observability data volume and cost with distributed tracing</Description>
+      <Mitigation>Sampling strategies for high-volume traces, log retention policies, CloudWatch Logs Insights for analysis</Mitigation>
+      <FutureOption>Consider third-party APM (Datadog, New Relic) if native CloudWatch insufficient for complex debugging</FutureOption>
+    </Risk>
+  </Risks>
+
+  <Compliance>
+    <GDPR>
+      <Requirement>BR-001, BR-008</Requirement>
+      <Implementation>User data encryption, right to erasure, data portability, consent management, data residency controls</Implementation>
+    </GDPR>
+    <PCIDSS>
+      <Requirement>BR-003, BR-008</Requirement>
+      <Implementation>Payment data encryption, tokenization, network segmentation, access logging, quarterly scans</Implementation>
+    </PCIDSS>
+    <AuditTrail>
+      <Requirement>BR-007, BR-008</Requirement>
+      <Implementation>CloudTrail for AWS API calls, application audit logs in CloudWatch, immutable log storage in S3 with Glacier archival</Implementation>
+    </AuditTrail>
+  </Compliance>
+
+  <Documentation>
+    <Requirement>BR-019</Requirement>
+    <Architecture>C4 model diagrams, ADRs for key decisions, service dependency maps</Architecture>
+    <API>OpenAPI/Swagger specs auto-generated, published to developer portal</API>
+    <Runbooks>Operational procedures for common scenarios, troubleshooting guides, escalation paths</Runbooks>
+    <Deployment>Step-by-step deployment procedures, rollback instructions, environment setup guides</Deployment>
+    <Training>Knowledge transfer sessions, hands-on workshops, recorded demos</Training>
+    <Maintenance>Quarterly documentation reviews, version control in Git, feedback incorporation process</Maintenance>
+  </Documentation>
+
+  <SuccessCriteria>
+    <Availability>99.9% uptime SLA achieved (CFR-001)</Availability>
+    <Performance>API response 500ms at p95, page load 2s, 1000 concurrent users (CFR-002)</Performance>
+    <Security>Zero critical vulnerabilities, compliance audits passed (CFR-003)</Security>
+    <Scalability>3x peak load support, auto-scaling validated (CFR-004)</Scalability>
+    <DataIntegrity>100% data migration accuracy, zero data loss (BR-017)</DataIntegrity>
+    <CostOptimization>Serverless cost model within budget, monthly optimization reviews (BR-016)</CostOptimization>
+    <Testing>80% code coverage, all test suites passing (BR-018)</Testing>
+    <Cutover>Successful cutover within maintenance window, zero critical issues (BR-020)</Cutover>
+  </SuccessCriteria>
+</ArchitectureSpec>
