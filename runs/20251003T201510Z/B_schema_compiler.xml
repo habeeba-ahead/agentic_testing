@@ -1,0 +1,150 @@
+xml
+<ArchitectureSpec version="1.0">
+  <Context>
+    <AppName>Monolith Java Application Cloud Migration</AppName>
+    <BusinessCapabilities>User Management, Product Catalog, Order Processing, Payment Integration, Session Management, Authentication, Authorization, Inventory Tracking, API Gateway, Configuration Management, Caching, Logging, Monitoring</BusinessCapabilities>
+    <Criticality>high</Criticality>
+  </Context>
+
+  <Decisions>
+    <DomainStyle>microservices</DomainStyle>
+    <IntegrationStyle>event-driven, REST</IntegrationStyle>
+    <Runtime>python</Runtime>
+    <DataTier>dynamodb, aurora-serverless-v2, s3</DataTier>
+    <InfraBaseline>serverless</InfraBaseline>
+  </Decisions>
+
+  <Patterns>
+    <Pattern name="Strangler Fig" rationale="Incremental migration from Java monolith to Python microservices, allowing parallel operation and gradual cutover"/>
+    <Pattern name="Database per Service" rationale="Decompose monolithic database into service-specific data stores (DynamoDB for high-write KV, Aurora for relational)"/>
+    <Pattern name="Event-Driven Architecture" rationale="Decouple services using EventBridge for async communication, enabling scalability and resilience"/>
+    <Pattern name="API Gateway Pattern" rationale="Centralized entry point for all microservices with authentication, rate limiting, and monitoring"/>
+    <Pattern name="CQRS" rationale="Separate read/write paths for order processing to optimize performance and scalability"/>
+    <Pattern name="Circuit Breaker" rationale="Prevent cascade failures in service-to-service communication"/>
+    <Pattern name="Saga Pattern" rationale="Manage distributed transactions in order processing workflow"/>
+    <Pattern name="Cache-Aside" rationale="Implement distributed caching with DynamoDB DAX for frequently accessed data"/>
+    <Pattern name="Bulkhead Isolation" rationale="Isolate service resources to prevent resource exhaustion"/>
+    <Pattern name="Idempotency" rationale="Ensure all write operations are idempotent for reliability"/>
+  </Patterns>
+
+  <NonFunctionals>
+    <Availability target="99.9%"/>
+    <Latency p95_ms="500"/>
+    <Throughput rps="1000"/>
+    <Security notes="IAM-based authentication, KMS encryption at rest, TLS 1.2+ in transit, Secrets Manager for credentials, no sensitive data in logs, GDPR and PCI DSS compliance"/>
+    <Compliance notes="GDPR for user data, PCI DSS for payment processing, audit trails for all transactions, data retention policies enforced"/>
+    <Observability notes="CloudWatch with OTEL integration, structured JSON logs, distributed tracing, custom metrics per service, alerting on SLA violations"/>
+    <CostGuardrails notes="Serverless-first to minimize idle costs, auto-scaling with max limits, budget alerts at 80%, resource tagging for cost allocation, monthly cost reviews"/>
+  </NonFunctionals>
+
+  <Services>
+    <Service name="UserService" domain="user-management">
+      <APIs>
+        <API name="UserRegistration" protocol="REST" auth="IAM" sync_or_async="sync"/>
+        <API name="UserAuthentication" protocol="REST" auth="IAM" sync_or_async="sync"/>
+        <API name="UserProfile" protocol="REST" auth="IAM" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="DynamoDB" purpose="User profiles and credentials with high-write performance"/>
+        <Store type="S3" purpose="User document storage and audit logs"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="topic" name="UserEvents" purpose="Publish user lifecycle events for downstream services"/>
+      </QueuesTopics>
+    </Service>
+
+    <Service name="ProductCatalogService" domain="product-management">
+      <APIs>
+        <API name="ProductCRUD" protocol="REST" auth="IAM" sync_or_async="sync"/>
+        <API name="ProductSearch" protocol="REST" auth="IAM" sync_or_async="sync"/>
+        <API name="ProductCategory" protocol="REST" auth="IAM" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="Aurora-Serverless-v2" purpose="Product catalog with relational integrity and complex queries"/>
+        <Store type="DynamoDB" purpose="Product search index and cache"/>
+        <Store type="S3" purpose="Product images and media"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="topic" name="ProductEvents" purpose="Publish product updates for inventory and search indexing"/>
+      </QueuesTopics>
+    </Service>
+
+    <Service name="OrderProcessingService" domain="order-management">
+      <APIs>
+        <API name="OrderCreation" protocol="REST" auth="IAM" sync_or_async="sync"/>
+        <API name="OrderStatus" protocol="REST" auth="IAM" sync_or_async="sync"/>
+        <API name="OrderHistory" protocol="REST" auth="IAM" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="Aurora-Serverless-v2" purpose="Order transactions with ACID guarantees"/>
+        <Store type="DynamoDB" purpose="Order status tracking and event sourcing"/>
+        <Store type="S3" purpose="Order audit logs and compliance records"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="topic" name="OrderEvents" purpose="Publish order state changes"/>
+        <Channel type="queue" name="OrderFulfillmentQueue" purpose="Async order fulfillment processing"/>
+        <Channel type="queue" name="PaymentQueue" purpose="Payment processing workflow"/>
+      </QueuesTopics>
+    </Service>
+
+    <Service name="SessionService" domain="session-management">
+      <APIs>
+        <API name="SessionManagement" protocol="REST" auth="IAM" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="DynamoDB" purpose="Distributed session store with TTL"/>
+      </DataStores>
+      <QueuesTopics/>
+    </Service>
+
+    <Service name="ConfigurationService" domain="configuration-management">
+      <APIs>
+        <API name="ConfigRetrieval" protocol="REST" auth="IAM" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="DynamoDB" purpose="Dynamic configuration with versioning"/>
+        <Store type="S3" purpose="Configuration backups and audit trail"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="topic" name="ConfigChangeEvents" purpose="Notify services of configuration updates"/>
+      </QueuesTopics>
+    </Service>
+
+    <Service name="APIGatewayService" domain="api-management">
+      <APIs>
+        <API name="UnifiedAPI" protocol="REST" auth="IAM" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="DynamoDB" purpose="API keys and rate limiting state"/>
+      </DataStores>
+      <QueuesTopics/>
+    </Service>
+  </Services>
+
+  <Constraints>
+    <Must>Migrate from Java monolith to Python microservices; maintain 99.9% availability; encrypt all data at rest and in transit; achieve zero data loss during migration; support 1000 concurrent users minimum; maintain GDPR and PCI DSS compliance; implement idempotent operations; use serverless-first approach; deploy on AWS; use Terraform for IaC</Must>
+    <Should>Achieve 80% code coverage; implement distributed tracing; use feature flags for gradual rollout; conduct quarterly DR tests; optimize for cost with budget alerts; implement chaos engineering; maintain API response time under 500ms p95; support 3x peak load</Should>
+    <MustNot>Log sensitive data in plain text; deploy without security scanning; change user data schema without approval; lose order data during migration; exceed maximum instance limits; deploy to production without passing tests; store credentials in code</MustNot>
+  </Constraints>
+
+  <CloudMapping provider="AWS">
+    <Compute>Lambda functions for all microservices (Python 3.11 runtime), Lambda layers for shared dependencies, Step Functions for order saga orchestration</Compute>
+    <Networking>API Gateway (REST APIs with IAM authorizers), VPC with private subnets for Aurora, VPC endpoints for AWS services, CloudFront for static content delivery</Networking>
+    <Data>DynamoDB with DAX for caching, Aurora Serverless v2 (PostgreSQL) for relational data, S3 for object storage and event logs, DynamoDB Streams for change data capture</Data>
+    <Messaging>EventBridge for event routing and pub-sub, SQS for work queues and dead-letter queues, SNS for fan-out patterns</Messaging>
+    <Identity>IAM roles and policies for service authentication, Cognito for user authentication (if needed), Secrets Manager for credential storage, KMS for encryption keys</Identity>
+  </CloudMapping>
+
+  <Risks>
+    <Risk item="Java to Python runtime migration introduces rewrite risk and potential logic gaps" mitigation="Comprehensive testing strategy with 80% coverage, parallel run period, feature parity validation, automated regression tests"/>
+    <Risk item="Distributed transaction complexity in order processing may cause data inconsistency" mitigation="Implement Saga pattern with compensating transactions, event sourcing for audit trail, idempotency keys, thorough integration testing"/>
+    <Risk item="DynamoDB may not support all relational queries from monolith database" mitigation="Use Aurora Serverless v2 for complex relational queries, DynamoDB for high-write KV patterns, hybrid approach with data denormalization"/>
+    <Risk item="Serverless cold starts may impact latency SLA" mitigation="Provisioned concurrency for critical paths, Lambda SnapStart for Python, async processing where possible, performance monitoring"/>
+    <Risk item="EventBridge eventual consistency may affect order processing reliability" mitigation="Implement idempotency, retry logic with exponential backoff, dead-letter queues, event replay capability"/>
+    <Risk item="Cost overruns from uncontrolled Lambda invocations and DynamoDB throughput" mitigation="Reserved capacity for predictable workloads, budget alerts at 80%, auto-scaling limits, monthly cost reviews, resource tagging"/>
+    <Risk item="Data migration from monolith may cause downtime exceeding maintenance window" mitigation="Incremental migration with dual-write pattern, data validation checksums, rollback procedures, migration rehearsal in staging"/>
+    <Risk item="Session management migration may disrupt active user sessions" mitigation="Gradual cutover with session replication, extended session TTL during migration, user communication plan"/>
+    <Risk item="Multi-region DR not explicitly defined in guardrails" mitigation="Implement cross-region S3 replication, Aurora global database, EventBridge cross-region rules, quarterly DR testing"/>
+    <Risk item="PCI DSS compliance for payment data in serverless environment" mitigation="Tokenize payment data, use AWS-compliant services, third-party payment gateway integration, regular compliance audits"/>
+  </Risks>
+</ArchitectureSpec>

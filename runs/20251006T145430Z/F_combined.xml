@@ -1,0 +1,152 @@
+xml
+<ArchitectureSpec version="1.0">
+  <Context>
+    <AppName>Training Application Cloud Migration</AppName>
+    <BusinessCapabilities>User Authentication,Course Management,Enrollment Management,Session Management,Configuration Management,Logging and Monitoring</BusinessCapabilities>
+    <Criticality>high</Criticality>
+  </Context>
+
+  <Decisions>
+    <DomainStyle>microservices</DomainStyle>
+    <IntegrationStyle>event-driven with REST APIs</IntegrationStyle>
+    <Runtime>python</Runtime>
+    <DataTier>aurora-serverless-v2, dynamodb, s3</DataTier>
+    <InfraBaseline>serverless</InfraBaseline>
+  </Decisions>
+
+  <Patterns>
+    <Pattern name="Strangler Fig" rationale="Incremental migration from monolith to microservices with parallel run capability and gradual traffic shift"/>
+    <Pattern name="API Gateway" rationale="Unified entry point for backward compatibility, routing, rate limiting, and centralized authentication"/>
+    <Pattern name="Database per Service" rationale="Course and Enrollment services own their data stores; shared user identity in Aurora for ACID guarantees"/>
+    <Pattern name="Event-Driven Architecture" rationale="Async communication via EventBridge for enrollment events, course updates, audit trails"/>
+    <Pattern name="Circuit Breaker" rationale="Service-to-service resilience with exponential backoff and fallback mechanisms"/>
+    <Pattern name="Distributed Session Store" rationale="DynamoDB-backed sessions for stateless horizontal scaling across Lambda invocations"/>
+    <Pattern name="Outbox Pattern" rationale="Transactional consistency for publishing domain events from Aurora to EventBridge"/>
+    <Pattern name="CQRS-lite" rationale="DynamoDB read replicas for course catalog queries; Aurora for transactional writes"/>
+    <Pattern name="Saga" rationale="Orchestrated enrollment workflow across Course and Enrollment services with compensating transactions"/>
+    <Pattern name="Centralized Configuration" rationale="AWS Systems Manager Parameter Store for environment-specific config with versioning"/>
+    <Pattern name="Correlation ID Propagation" rationale="Request tracing across Lambda functions and async events via X-Ray and structured logs"/>
+    <Pattern name="Blue-Green Deployment" rationale="Lambda alias-based traffic shifting for zero-downtime cutover and rapid rollback"/>
+  </Patterns>
+
+  <NonFunctionals>
+    <Availability target="99.9%"/>
+    <Latency p95_ms="300"/>
+    <Throughput rps="150"/>
+    <Security notes="IAM least-privilege per service; Secrets Manager for DB credentials; KMS encryption at rest; TLS 1.2+ in transit; WAF on API Gateway; VPC isolation for Aurora"/>
+    <Compliance notes="GDPR data residency enforced via AWS region selection; audit logs to S3 with 90-day retention; PII encryption; data subject access request automation"/>
+    <Observability notes="CloudWatch Logs with structured JSON; X-Ray distributed tracing; OTEL instrumentation; custom metrics for business KPIs; alarms on error rate, latency p95, throttles"/>
+    <CostGuardrails notes="Lambda provisioned concurrency only for auth service; Aurora auto-pause after 5min idle; DynamoDB on-demand pricing; S3 Intelligent-Tiering; budget alerts at 80% and 100% thresholds"/>
+  </NonFunctionals>
+
+  <Services>
+    <Service name="AuthService" domain="Identity and Access">
+      <APIs>
+        <API name="POST /auth/login" protocol="REST" auth="none" sync_or_async="sync"/>
+        <API name="POST /auth/logout" protocol="REST" auth="JWT" sync_or_async="sync"/>
+        <API name="GET /auth/validate" protocol="REST" auth="JWT" sync_or_async="sync"/>
+        <API name="POST /auth/refresh" protocol="REST" auth="refresh-token" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="aurora-serverless-v2-postgres" purpose="User accounts, roles, password hashes"/>
+        <Store type="dynamodb" purpose="Active sessions with TTL"/>
+        <Store type="secrets-manager" purpose="JWT signing keys"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="topic" name="user.authenticated" purpose="Audit and analytics"/>
+      </QueuesTopics>
+    </Service>
+
+    <Service name="CourseService" domain="Course Management">
+      <APIs>
+        <API name="POST /courses" protocol="REST" auth="JWT-ADMIN" sync_or_async="sync"/>
+        <API name="GET /courses" protocol="REST" auth="JWT" sync_or_async="sync"/>
+        <API name="GET /courses/{id}" protocol="REST" auth="JWT" sync_or_async="sync"/>
+        <API name="PUT /courses/{id}" protocol="REST" auth="JWT-ADMIN" sync_or_async="sync"/>
+        <API name="DELETE /courses/{id}" protocol="REST" auth="JWT-ADMIN" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="aurora-serverless-v2-postgres" purpose="Course master data, capacity, metadata"/>
+        <Store type="dynamodb" purpose="Course catalog read cache with GSI on category"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="topic" name="course.created" purpose="Notify downstream services"/>
+        <Channel type="topic" name="course.updated" purpose="Cache invalidation"/>
+        <Channel type="topic" name="course.deleted" purpose="Enrollment cleanup trigger"/>
+      </QueuesTopics>
+    </Service>
+
+    <Service name="EnrollmentService" domain="Enrollment Management">
+      <APIs>
+        <API name="POST /enrollments" protocol="REST" auth="JWT" sync_or_async="sync"/>
+        <API name="DELETE /enrollments/{id}" protocol="REST" auth="JWT" sync_or_async="sync"/>
+        <API name="GET /enrollments/user/{userId}" protocol="REST" auth="JWT" sync_or_async="sync"/>
+        <API name="GET /enrollments/course/{courseId}" protocol="REST" auth="JWT-ADMIN" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="aurora-serverless-v2-postgres" purpose="Enrollment records, status, history"/>
+        <Store type="dynamodb" purpose="User enrollment index with GSI on userId and courseId"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="queue" name="enrollment.requests" purpose="Async enrollment processing with capacity checks"/>
+        <Channel type="topic" name="enrollment.completed" purpose="Notification and analytics"/>
+        <Channel type="topic" name="enrollment.failed" purpose="Compensating transaction trigger"/>
+      </QueuesTopics>
+    </Service>
+
+    <Service name="ConfigService" domain="Configuration Management">
+      <APIs>
+        <API name="GET /config/{key}" protocol="REST" auth="service-to-service" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="ssm-parameter-store" purpose="Environment-specific configuration with versioning"/>
+        <Store type="secrets-manager" purpose="Sensitive configuration values"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="topic" name="config.updated" purpose="Dynamic config refresh notification"/>
+      </QueuesTopics>
+    </Service>
+
+    <Service name="ObservabilityService" domain="Logging and Monitoring">
+      <APIs>
+        <API name="POST /logs" protocol="REST" auth="service-to-service" sync_or_async="async"/>
+      </APIs>
+      <DataStores>
+        <Store type="s3" purpose="Long-term log storage with 90-day retention"/>
+        <Store type="cloudwatch-logs" purpose="Real-time log aggregation and search"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="queue" name="logs.ingestion" purpose="Buffered log processing"/>
+      </QueuesTopics>
+    </Service>
+  </Services>
+
+  <Constraints>
+    <Must>Maintain 100% data integrity during migration with automated reconciliation; Preserve all existing API endpoints for backward compatibility; Implement rollback capability within 15 minutes; Achieve 80% unit test coverage and 100% critical path coverage; Encrypt data at rest and in transit; Implement least-privilege IAM policies per service; Deploy via Terraform IaC only</Must>
+    <Should>Minimize vendor lock-in using abstraction layers where feasible; Implement caching for 80% hit ratio on course queries; Use blue-green deployment for zero-downtime cutover; Implement circuit breakers with 5-second timeout and 3-failure threshold; Maintain cost within 120% of current operational budget in year one</Should>
+    <MustNot>Deploy without security scanning in CI/CD pipeline; Exceed 500ms p95 latency for authentication; Exceed 200ms p95 latency for course operations; Deploy to production without staging validation; Store secrets in code or environment variables</MustNot>
+  </Constraints>
+
+  <CloudMapping provider="AWS">
+    <Compute>Lambda functions for all service endpoints with Python 3.11 runtime; Lambda provisioned concurrency (2 instances) for AuthService only; Lambda reserved concurrency limits per service to prevent runaway costs; Step Functions for enrollment saga orchestration</Compute>
+    <Networking>API Gateway REST API with custom domain; VPC with private subnets for Aurora; VPC endpoints for DynamoDB, S3, Secrets Manager; Security groups restricting Aurora access to Lambda security group; WAF with rate limiting (100 req/5min per IP) and SQL injection rules; Route53 for DNS with health checks</Networking>
+    <Data>Aurora Serverless v2 PostgreSQL (min 0.5 ACU, max 4 ACU, auto-pause 5min) for transactional data; DynamoDB tables with on-demand billing for sessions and read caches; DynamoDB TTL on session table; S3 buckets with Intelligent-Tiering for logs and events; RDS Proxy for connection pooling to Aurora</Data>
+    <Messaging>EventBridge custom event bus for domain events; SQS standard queues for enrollment processing with DLQ; SQS FIFO queue for ordered enrollment operations per course; EventBridge rules routing to Lambda targets; SNS topics for fan-out notifications</Messaging>
+    <Identity>Cognito User Pool for user authentication with custom Lambda triggers; IAM roles per Lambda function with least-privilege policies; Secrets Manager for database credentials with automatic rotation; KMS customer-managed keys for encryption; IAM service roles for cross-service invocation</Identity>
+  </CloudMapping>
+
+  <Risks>
+    <Risk item="Aurora Serverless v2 cold start latency may exceed 500ms authentication SLA during scale-from-zero" mitigation="Use provisioned concurrency for AuthService Lambda; set Aurora min capacity to 0.5 ACU to avoid full cold start; implement client-side retry with exponential backoff"/>
+    <Risk item="DynamoDB eventual consistency may cause stale session reads immediately after write" mitigation="Use strongly consistent reads for session validation; implement session write-through cache in Lambda memory; add session version number for optimistic locking"/>
+    <Risk item="Dual-write to Aurora and DynamoDB during migration creates consistency risk" mitigation="Implement outbox pattern with Aurora as source of truth; use DynamoDB Streams for async replication; add reconciliation job running hourly"/>
+    <Risk item="EventBridge at-least-once delivery may cause duplicate enrollment processing" mitigation="Implement idempotency keys in enrollment records; use DynamoDB conditional writes for deduplication; add idempotency token to API requests"/>
+    <Risk item="Lambda concurrent execution limits may throttle during peak enrollment periods" mitigation="Request service quota increase to 1000 concurrent executions; implement SQS buffering for enrollment requests; add CloudWatch alarms on throttle metrics"/>
+    <Risk item="Cross-service latency accumulation may exceed 300ms p95 for enrollment workflow" mitigation="Implement aggressive caching of course data in enrollment service; use Lambda SnapStart for faster cold starts; optimize database queries with proper indexing"/>
+    <Risk item="Strangler Fig pattern requires maintaining monolith during migration increasing operational complexity" mitigation="Use API Gateway routing rules for gradual traffic shift; implement feature flags for rollback; maintain comprehensive integration test suite covering both systems"/>
+    <Risk item="Cost overrun risk from DynamoDB on-demand pricing during load testing or traffic spikes" mitigation="Set CloudWatch billing alarms at 80% and 100% of monthly budget; implement DynamoDB auto-scaling for provisioned mode as alternative; use AWS Cost Explorer for daily cost tracking"/>
+    <Risk item="GDPR data residency requirement conflicts with multi-region DR strategy" mitigation="Deploy primary and DR infrastructure in same EU region (eu-west-1); use Aurora Global Database for cross-region replication with data filtering; implement data residency checks in deployment pipeline"/>
+    <Risk item="Vendor lock-in to AWS-specific services (EventBridge, DynamoDB) limits portability" mitigation="Document abstraction layer requirements for future multi-cloud; use standard protocols (CloudEvents) for event schema; maintain Terraform modules for infrastructure portability"/>
+    <Risk item="Session migration from monolith in-memory to DynamoDB may cause user logouts" mitigation="Implement session export from monolith to DynamoDB before cutover; maintain dual session stores during transition; communicate maintenance window to users"/>
+    <Risk item="Aurora auto-pause may cause 30-second resume latency impacting user experience" mitigation="Disable auto-pause for production environment; use auto-pause only in dev/staging; implement connection warming Lambda on schedule"/>
+  </Risks>
+</ArchitectureSpec>

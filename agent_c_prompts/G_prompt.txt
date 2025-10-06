@@ -1,0 +1,14 @@
+Only the BRD is available. Where text is ambiguous, generate up to 2 hypotheses per domain with confidence and explicit assumptions.
+
+For each domain:
+name, hypotheses[{assumption, scope, drivers[], workstreams[], priority, confidence, evidence[]}].
+
+Also provide a merge_recommendation explaining how to resolve ambiguity (what to ask for).
+
+[INPUT: BRD]
+{BRD_TEXT}
+
+[SCHEMA]
+{SCHEMA}
+
+Return JSON only.

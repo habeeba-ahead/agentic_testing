@@ -1,0 +1,22 @@
+
+{
+  "ranking": [
+    {
+      "prompt": "prompt_a",
+      "score": 92,
+      "reasons": "Excellent guardrail alignment (serverless-first with Lambda/DynamoDB/Aurora), explicit CloudMapping per service, comprehensive risk mitigations, numeric NFRs, strong IaC mappability."
+    },
+    {
+      "prompt": "prompt_b",
+      "score": 78,
+      "reasons": "Good structure and completeness but weaker CloudMapping detail (generic 'compute/database' vs. explicit Lambda/DynamoDB), less concrete IaC guidance, some missing numeric targets in NFRs."
+    },
+    {
+      "prompt": "prompt_c",
+      "score": 65,
+      "reasons": "Adequate coverage but significant guardrail deviation (suggests ECS/EKS without serverless-first justification), vague CloudMapping, risks lack concrete mitigations, lower IaC readiness."
+    }
+  ],
+  "winner": "prompt_a",
+  "notes": "prompt_a wins decisively on guardrail alignment (serverless-first strictly followed), IaC mappability (explicit AWS service names per component), and risk clarity (concrete migration steps with rollback). prompt_b is solid but less prescriptive for IaC generation. prompt_c deviates from serverless-first mandate without justification, reducing consistency and IaC confidence."
+}

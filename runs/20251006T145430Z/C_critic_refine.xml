@@ -1,0 +1,505 @@
+xml
+<?xml version="1.0" encoding="UTF-8"?>
+<architecture_specification>
+  <metadata>
+    <project_name>Monolith Training Application Cloud Migration</project_name>
+    <version>1.0</version>
+    <last_updated>2024</last_updated>
+    <architecture_tier>Cloud-Native Microservices</architecture_tier>
+    <cloud_provider>AWS</cloud_provider>
+  </metadata>
+
+  <system_overview>
+    <description>Migration of monolithic Java training application to serverless-first microservices architecture on AWS. Decomposes monolith into domain-driven microservices for user management, course management, and enrollment management with event-driven integration patterns.</description>
+    <architecture_style>Microservices with Event-Driven Architecture</architecture_style>
+    <deployment_model>Serverless-First on AWS</deployment_model>
+    <runtime_environment>Python 3.11 on AWS Lambda</runtime_environment>
+  </system_overview>
+
+  <architectural_patterns>
+    <pattern>
+      <name>API Gateway Pattern</name>
+      <category>Integration</category>
+      <description>Amazon API Gateway as unified entry point routing requests to Lambda-based microservices, maintaining backward compatibility with existing REST endpoints</description>
+      <rationale>Provides centralized API management, request routing, throttling, and authentication while maintaining existing API contracts during migration</rationale>
+      <implementation_details>API Gateway REST API with custom domain, request/response transformation, Lambda proxy integration, usage plans for rate limiting</implementation_details>
+      <related_requirements>REQ-005, REQ-010</related_requirements>
+      <related_nfrs>NFR-001, NFR-002, NFR-008</related_nfrs>
+    </pattern>
+
+    <pattern>
+      <name>Strangler Fig Migration Pattern</name>
+      <category>Migration</category>
+      <description>Incremental migration strategy routing traffic between monolith and new microservices via API Gateway, gradually replacing monolith functionality</description>
+      <rationale>Enables zero-downtime migration with rollback capability, maintaining backward compatibility while reducing risk</rationale>
+      <implementation_details>API Gateway routing rules with weighted targets, feature flags in Lambda functions, parallel run validation</implementation_details>
+      <related_requirements>REQ-001, REQ-002, REQ-003</related_requirements>
+      <related_nfrs>NFR-006, NFR-009</related_nfrs>
+    </pattern>
+
+    <pattern>
+      <name>Event-Driven Choreography</name>
+      <category>Integration</category>
+      <description>EventBridge-based event bus for asynchronous service communication, publishing domain events for enrollment, course updates, and user changes</description>
+      <rationale>Decouples microservices, enables scalability, and maintains data consistency across service boundaries without tight coupling</rationale>
+      <implementation_details>EventBridge custom event bus with event schemas, Lambda event consumers, DLQ for failed events, event replay capability</implementation_details>
+      <related_requirements>REQ-003, REQ-010</related_requirements>
+      <related_nfrs>NFR-003, NFR-005, NFR-009</related_nfrs>
+    </pattern>
+
+    <pattern>
+      <name>Database per Service</name>
+      <category>Data</category>
+      <description>Each microservice owns its data store: DynamoDB for user sessions and high-write enrollment data, Aurora Serverless v2 for course catalog and relational queries</description>
+      <rationale>Enables independent scaling, deployment, and technology choices per service while maintaining data integrity within bounded contexts</rationale>
+      <implementation_details>DynamoDB single-table design for enrollments, Aurora PostgreSQL for courses with read replicas, S3 for event sourcing and audit logs</implementation_details>
+      <related_requirements>REQ-004, REQ-006</related_requirements>
+      <related_nfrs>NFR-004, NFR-005, NFR-010</related_nfrs>
+    </pattern>
+
+    <pattern>
+      <name>CQRS with Event Sourcing</name>
+      <category>Data</category>
+      <description>Separate read and write models for enrollment service with event sourcing to S3 for audit trail and data recovery</description>
+      <rationale>Optimizes read and write performance independently, provides complete audit history, enables temporal queries and replay</rationale>
+      <implementation_details>Lambda writes events to S3 and DynamoDB, separate Lambda projections for read models, S3 Select for event replay</implementation_details>
+      <related_requirements>REQ-003, REQ-015</related_requirements>
+      <related_nfrs>NFR-004, NFR-010, NFR-011</related_nfrs>
+    </pattern>
+
+    <pattern>
+      <name>Circuit Breaker Pattern</name>
+      <category>Resilience</category>
+      <description>Lambda-based circuit breaker for service-to-service calls with exponential backoff and fallback responses</description>
+      <rationale>Prevents cascading failures, improves system resilience, and maintains availability during partial outages</rationale>
+      <implementation_details>Python decorator implementing circuit breaker state machine, CloudWatch metrics for circuit state, DynamoDB for state persistence</implementation_details>
+      <related_requirements>REQ-010, REQ-015</related_requirements>
+      <related_nfrs>NFR-006, NFR-009</related_nfrs>
+    </pattern>
+
+    <pattern>
+      <name>Saga Pattern for Distributed Transactions</name>
+      <category>Data</category>
+      <description>Step Functions orchestrated saga for enrollment workflow coordinating course capacity check, user validation, and enrollment creation with compensating transactions</description>
+      <rationale>Maintains data consistency across microservices without distributed transactions, provides visibility into long-running workflows</rationale>
+      <implementation_details>Step Functions state machine with Lambda tasks, DynamoDB for saga state, compensating Lambda functions for rollback</implementation_details>
+      <related_requirements>REQ-003, REQ-009</related_requirements>
+      <related_nfrs>NFR-004, NFR-009</related_nfrs>
+    </pattern>
+
+    <pattern>
+      <name>API Versioning Strategy</name>
+      <category>Integration</category>
+      <description>URI-based API versioning with backward compatibility layer in API Gateway for existing clients</description>
+      <rationale>Maintains backward compatibility while enabling API evolution, supports gradual client migration</rationale>
+      <implementation_details>API Gateway stages for versions, Lambda aliases for version routing, request/response transformation for legacy formats</implementation_details>
+      <related_requirements>REQ-005</related_requirements>
+      <related_nfrs>NFR-002, NFR-008</related_nfrs>
+    </pattern>
+
+    <pattern>
+      <name>Centralized Configuration Management</name>
+      <category>Operations</category>
+      <description>AWS Systems Manager Parameter Store for application configuration with environment-specific hierarchies</description>
+      <rationale>Externalizes configuration, enables dynamic updates, provides encryption for secrets, supports multi-environment deployment</rationale>
+      <implementation_details>Parameter Store hierarchical parameters, Lambda environment variables from parameters, Secrets Manager for credentials, KMS encryption</implementation_details>
+      <related_requirements>REQ-011</related_requirements>
+      <related_nfrs>NFR-007, NFR-012</related_nfrs>
+    </pattern>
+
+    <pattern>
+      <name>Distributed Caching Strategy</name>
+      <category>Performance</category>
+      <description>Multi-layer caching with API Gateway caching, Lambda@Edge for static content, and DynamoDB DAX for hot data</description>
+      <rationale>Reduces latency, minimizes database load, improves cost efficiency for read-heavy operations</rationale>
+      <implementation_details>API Gateway cache with TTL, CloudFront with Lambda@Edge for course catalog, DynamoDB DAX cluster for enrollment queries</implementation_details>
+      <related_requirements>REQ-013</related_requirements>
+      <related_nfrs>NFR-001, NFR-005, NFR-014</related_nfrs>
+    </pattern>
+
+    <pattern>
+      <name>Observability with OpenTelemetry</name>
+      <category>Operations</category>
+      <description>Structured logging and distributed tracing using OpenTelemetry SDK with CloudWatch integration and X-Ray for request correlation</description>
+      <rationale>Provides end-to-end visibility, enables root cause analysis, supports performance optimization in distributed system</rationale>
+      <implementation_details>OTEL Python SDK in Lambda layers, CloudWatch Logs with JSON structured format, X-Ray tracing with correlation IDs, CloudWatch dashboards</implementation_details>
+      <related_requirements>REQ-007</related_requirements>
+      <related_nfrs>NFR-011, NFR-013</related_nfrs>
+    </pattern>
+
+    <pattern>
+      <name>Security Defense in Depth</name>
+      <category>Security</category>
+      <description>Multi-layer security with Cognito for authentication, IAM for authorization, WAF for API protection, VPC for network isolation</description>
+      <rationale>Implements zero-trust security model, protects against common attacks, ensures compliance with data protection regulations</rationale>
+      <implementation_details>Cognito user pools with MFA, IAM roles with least privilege, WAF rules on API Gateway, Lambda in VPC for database access, KMS for encryption</implementation_details>
+      <related_requirements>REQ-001, REQ-014</related_requirements>
+      <related_nfrs>NFR-007, NFR-012</related_nfrs>
+    </pattern>
+
+    <pattern>
+      <name>Asynchronous Work Queue Pattern</name>
+      <category>Integration</category>
+      <description>SQS queues for background processing of enrollment notifications, report generation, and data synchronization tasks</description>
+      <rationale>Decouples time-consuming operations, enables retry logic, smooths traffic spikes, improves user experience</rationale>
+      <implementation_details>SQS standard queues with Lambda polling, DLQ for failed messages, visibility timeout tuning, batch processing</implementation_details>
+      <related_requirements>REQ-003, REQ-010</related_requirements>
+      <related_nfrs>NFR-003, NFR-005, NFR-009</related_nfrs>
+    </pattern>
+
+    <pattern>
+      <name>Infrastructure as Code with Terraform</name>
+      <category>Operations</category>
+      <description>Complete infrastructure definition in Terraform with modular design, state management in S3, and environment promotion workflow</description>
+      <rationale>Ensures reproducibility, enables version control, supports disaster recovery, facilitates multi-environment management</rationale>
+      <implementation_details>Terraform modules per microservice, remote state in S3 with DynamoDB locking, workspaces for environments, CI/CD integration</implementation_details>
+      <related_requirements>REQ-012, REQ-015</related_requirements>
+      <related_nfrs>NFR-010, NFR-013</related_nfrs>
+    </pattern>
+
+    <pattern>
+      <name>Blue-Green Deployment with Lambda Aliases</name>
+      <category>Deployment</category>
+      <description>Lambda aliases with weighted routing for canary deployments and instant rollback capability</description>
+      <rationale>Enables zero-downtime deployments, reduces deployment risk, provides instant rollback, supports gradual traffic shifting</rationale>
+      <implementation_details>Lambda versions with aliases, API Gateway stage variables, CloudWatch alarms for automatic rollback, CodeDeploy for orchestration</implementation_details>
+      <related_requirements>REQ-012</related_requirements>
+      <related_nfrs>NFR-006, NFR-009, NFR-013</related_nfrs>
+    </pattern>
+
+    <pattern>
+      <name>Automated Backup and Recovery</name>
+      <category>Resilience</category>
+      <description>Automated backups for Aurora with point-in-time recovery, DynamoDB continuous backups, S3 versioning for event store</description>
+      <rationale>Ensures data durability, enables disaster recovery, meets RPO/RTO requirements, supports compliance</rationale>
+      <implementation_details>Aurora automated backups with 7-day retention, DynamoDB PITR enabled, S3 versioning and lifecycle policies, cross-region replication for DR</implementation_details>
+      <related_requirements>REQ-015</related_requirements>
+      <related_nfrs>NFR-010, NFR-011</related_nfrs>
+    </pattern>
+  </architectural_patterns>
+
+  <component_architecture>
+    <component>
+      <name>API Gateway Layer</name>
+      <type>API Management</type>
+      <description>Amazon API Gateway REST API providing unified entry point with request routing, authentication, rate limiting, and response transformation</description>
+      <technology_stack>AWS API Gateway, Lambda Authorizers, WAF</technology_stack>
+      <responsibilities>
+        <responsibility>Route requests to appropriate microservice Lambda functions</responsibility>
+        <responsibility>Enforce authentication and authorization via Cognito integration</responsibility>
+        <responsibility>Apply rate limiting and throttling per usage plans</responsibility>
+        <responsibility>Transform requests/responses for backward compatibility</responsibility>
+        <responsibility>Cache responses for read-heavy endpoints</responsibility>
+        <responsibility>Log all API requests for audit and monitoring</responsibility>
+      </responsibilities>
+      <interfaces>
+        <interface>
+          <name>REST API Endpoints</name>
+          <type>REST</type>
+          <protocol>HTTPS</protocol>
+          <specification>OpenAPI 3.0</specification>
+        </interface>
+      </interfaces>
+      <dependencies>
+        <dependency>Cognito User Pool for authentication</dependency>
+        <dependency>Lambda functions for business logic</dependency>
+        <dependency>CloudWatch for logging and metrics</dependency>
+        <dependency>WAF for security rules</dependency>
+      </dependencies>
+      <nfr_mappings>NFR-001, NFR-002, NFR-006, NFR-007, NFR-008</nfr_mappings>
+    </component>
+
+    <component>
+      <name>User Management Service</name>
+      <type>Microservice</type>
+      <description>Lambda-based service managing user authentication, authorization, profile management, and role-based access control</description>
+      <technology_stack>Python 3.11, AWS Lambda, Cognito, DynamoDB</technology_stack>
+      <responsibilities>
+        <responsibility>Authenticate users via Cognito integration</responsibility>
+        <responsibility>Manage user profiles and preferences in DynamoDB</responsibility>
+        <responsibility>Enforce role-based access control (ADMIN, USER)</responsibility>
+        <responsibility>Handle password policies and MFA configuration</responsibility>
+        <responsibility>Publish user lifecycle events to EventBridge</responsibility>
+        <responsibility>Maintain user session state in DynamoDB</responsibility>
+      </responsibilities>
+      <interfaces>
+        <interface>
+          <name>User API</name>
+          <type>REST</type>
+          <protocol>HTTPS</protocol>
+          <endpoints>/users, /users/{id}, /auth/login, /auth/logout</endpoints>
+        </interface>
+        <interface>
+          <name>User Events</name>
+          <type>Event</type>
+          <protocol>EventBridge</protocol>
+          <events>UserCreated, UserUpdated, UserDeleted, UserLoggedIn</events>
+        </interface>
+      </interfaces>
+      <dependencies>
+        <dependency>Cognito User Pool for authentication</dependency>
+        <dependency>DynamoDB for user profiles and sessions</dependency>
+        <dependency>EventBridge for event publishing</dependency>
+        <dependency>Secrets Manager for API keys</dependency>
+      </dependencies>
+      <nfr_mappings>NFR-001, NFR-007, NFR-012</nfr_mappings>
+    </component>
+
+    <component>
+      <name>Course Management Service</name>
+      <type>Microservice</type>
+      <description>Lambda-based service managing course catalog including CRUD operations, course metadata, and capacity management</description>
+      <technology_stack>Python 3.11, AWS Lambda, Aurora Serverless v2 PostgreSQL, DAX</technology_stack>
+      <responsibilities>
+        <responsibility>Manage course lifecycle (create, read, update, delete)</responsibility>
+        <responsibility>Store course metadata in Aurora PostgreSQL</responsibility>
+        <responsibility>Enforce course capacity limits and availability rules</responsibility>
+        <responsibility>Cache frequently accessed courses in DAX</responsibility>
+        <responsibility>Publish course events to EventBridge</responsibility>
+        <responsibility>Generate course reports and analytics</responsibility>
+      </responsibilities>
+      <interfaces>
+        <interface>
+          <name>Course API</name>
+          <type>REST</type>
+          <protocol>HTTPS</protocol>
+          <endpoints>/courses, /courses/{id}, /courses/search</endpoints>
+        </interface>
+        <interface>
+          <name>Course Events</name>
+          <type>Event</type>
+          <protocol>EventBridge</protocol>
+          <events>CourseCreated, CourseUpdated, CourseDeleted, CourseCapacityChanged</events>
+        </interface>
+      </interfaces>
+      <dependencies>
+        <dependency>Aurora Serverless v2 for course data</dependency>
+        <dependency>DynamoDB DAX for caching</dependency>
+        <dependency>EventBridge for event publishing</dependency>
+        <dependency>S3 for course materials storage</dependency>
+      </dependencies>
+      <nfr_mappings>NFR-001, NFR-003, NFR-004, NFR-005</nfr_mappings>
+    </component>
+
+    <component>
+      <name>Enrollment Management Service</name>
+      <type>Microservice</type>
+      <description>Lambda-based service managing user enrollments with event sourcing, saga orchestration, and enrollment history tracking</description>
+      <technology_stack>Python 3.11, AWS Lambda, DynamoDB, Step Functions, S3</technology_stack>
+      <responsibilities>
+        <responsibility>Process enrollment requests via Step Functions saga</responsibility>
+        <responsibility>Store enrollment state in DynamoDB with single-table design</responsibility>
+        <responsibility>Maintain event sourcing log in S3 for audit trail</responsibility>
+        <responsibility>Enforce enrollment capacity constraints</responsibility>
+        <responsibility>Handle concurrent enrollment conflicts with optimistic locking</responsibility>
+        <responsibility>Publish enrollment events to EventBridge</responsibility>
+      </responsibilities>
+      <interfaces>
+        <interface>
+          <name>Enrollment API</name>
+          <type>REST</type>
+          <protocol>HTTPS</protocol>
+          <endpoints>/enrollments, /enrollments/{id}, /users/{userId}/enrollments</endpoints>
+        </interface>
+        <interface>
+          <name>Enrollment Events</name>
+          <type>Event</type>
+          <protocol>EventBridge</protocol>
+          <events>EnrollmentRequested, EnrollmentCompleted, EnrollmentCancelled, EnrollmentFailed</events>
+        </interface>
+      </interfaces>
+      <dependencies>
+        <dependency>DynamoDB for enrollment state</dependency>
+        <dependency>S3 for event sourcing</dependency>
+        <dependency>Step Functions for saga orchestration</dependency>
+        <dependency>Course Management Service for capacity validation</dependency>
+        <dependency>User Management Service for user validation</dependency>
+      </dependencies>
+      <nfr_mappings>NFR-001, NFR-003, NFR-004, NFR-005, NFR-009</nfr_mappings>
+    </component>
+
+    <component>
+      <name>Notification Service</name>
+      <type>Microservice</type>
+      <description>Lambda-based service consuming enrollment events from SQS to send notifications via SNS and SES</description>
+      <technology_stack>Python 3.11, AWS Lambda, SQS, SNS, SES</technology_stack>
+      <responsibilities>
+        <responsibility>Consume enrollment events from SQS queue</responsibility>
+        <responsibility>Send email notifications via SES</responsibility>
+        <responsibility>Send push notifications via SNS</responsibility>
+        <responsibility>Handle notification failures with retry logic</responsibility>
+        <responsibility>Track notification delivery status</responsibility>
+      </responsibilities>
+      <interfaces>
+        <interface>
+          <name>Event Consumer</name>
+          <type>Queue</type>
+          <protocol>SQS</protocol>
+          <source>EventBridge rule forwarding enrollment events</source>
+        </interface>
+      </interfaces>
+      <dependencies>
+        <dependency>SQS for event queue</dependency>
+        <dependency>SNS for push notifications</dependency>
+        <dependency>SES for email delivery</dependency>
+        <dependency>DynamoDB for notification tracking</dependency>
+      </dependencies>
+      <nfr_mappings>NFR-003, NFR-009</nfr_mappings>
+    </component>
+
+    <component>
+      <name>Configuration Service</name>
+      <type>Infrastructure</type>
+      <description>AWS Systems Manager Parameter Store providing centralized configuration management with environment-specific hierarchies</description>
+      <technology_stack>AWS Systems Manager Parameter Store, Secrets Manager, KMS</technology_stack>
+      <responsibilities>
+        <responsibility>Store application configuration parameters hierarchically</responsibility>
+        <responsibility>Manage environment-specific settings (dev, staging, prod)</responsibility>
+        <responsibility>Encrypt sensitive configuration with KMS</responsibility>
+        <responsibility>Provide configuration versioning and rollback</responsibility>
+        <responsibility>Enable dynamic configuration updates</responsibility>
+      </responsibilities>
+      <interfaces>
+        <interface>
+          <name>Parameter API</name>
+          <type>SDK</type>
+          <protocol>AWS SDK</protocol>
+          <access>Lambda functions via IAM roles</access>
+        </interface>
+      </interfaces>
+      <dependencies>
+        <dependency>KMS for encryption</dependency>
+        <dependency>IAM for access control</dependency>
+        <dependency>CloudWatch for change notifications</dependency>
+      </dependencies>
+      <nfr_mappings>NFR-007, NFR-012, NFR-013</nfr_mappings>
+    </component>
+
+    <component>
+      <name>Observability Platform</name>
+      <type>Infrastructure</type>
+      <description>CloudWatch-based observability with OpenTelemetry instrumentation, structured logging, distributed tracing, and custom dashboards</description>
+      <technology_stack>CloudWatch Logs, CloudWatch Metrics, X-Ray, OpenTelemetry, CloudWatch Dashboards</technology_stack>
+      <responsibilities>
+        <responsibility>Aggregate logs from all Lambda functions in CloudWatch Logs</responsibility>
+        <responsibility>Collect distributed traces via X-Ray with correlation IDs</responsibility>
+        <responsibility>Monitor custom business and technical metrics</responsibility>
+        <responsibility>Generate alerts based on thresholds and anomalies</responsibility>
+        <responsibility>Provide operational dashboards for system health</responsibility>
+        <responsibility>Enable log analysis and search capabilities</responsibility>
+      </responsibilities>
+      <interfaces>
+        <interface>
+          <name>Logging API</name>
+          <type>SDK</type>
+          <protocol>CloudWatch Logs API</protocol>
+          <format>JSON structured logs</format>
+        </interface>
+        <interface>
+          <name>Tracing API</name>
+          <type>SDK</type>
+          <protocol>X-Ray SDK</protocol>
+          <format>OpenTelemetry traces</format>
+        </interface>
+      </interfaces>
+      <dependencies>
+        <dependency>Lambda functions with OTEL instrumentation</dependency>
+        <dependency>CloudWatch Logs for log aggregation</dependency>
+        <dependency>X-Ray for distributed tracing</dependency>
+        <dependency>SNS for alert notifications</dependency>
+      </dependencies>
+      <nfr_mappings>NFR-011, NFR-013</nfr_mappings>
+    </component>
+
+    <component>
+      <name>Data Migration Service</name>
+      <type>Migration Tool</type>
+      <description>AWS DMS and custom Lambda functions for migrating data from monolith database to Aurora and DynamoDB with validation</description>
+      <technology_stack>AWS DMS, Lambda, Python 3.11, S3</technology_stack>
+      <responsibilities>
+        <responsibility>Extract data from monolith database</responsibility>
+        <responsibility>Transform data to target schema formats</responsibility>
+        <responsibility>Load data into Aurora and DynamoDB</responsibility>
+        <responsibility>Validate data integrity and completeness</responsibility>
+        <responsibility>Generate migration reports and reconciliation</responsibility>
+        <responsibility>Support incremental and full migration modes</responsibility>
+      </responsibilities>
+      <interfaces>
+        <interface>
+          <name>Migration API</name>
+          <type>REST</type>
+          <protocol>HTTPS</protocol>
+          <endpoints>/migration/start, /migration/status, /migration/validate</endpoints>
+        </interface>
+      </interfaces>
+      <dependencies>
+        <dependency>AWS DMS for database replication</dependency>
+        <dependency>S3 for staging and validation data</dependency>
+        <dependency>Aurora and DynamoDB as targets</dependency>
+        <dependency>Step Functions for orchestration</dependency>
+      </dependencies>
+      <nfr_mappings>NFR-004, NFR-010</nfr_mappings>
+    </component>
+
+    <component>
+      <name>CI/CD Pipeline</name>
+      <type>Infrastructure</type>
+      <description>CodePipeline-based automated build, test, and deployment pipeline with multi-stage promotion and automated rollback</description>
+      <technology_stack>CodePipeline, CodeBuild, CodeDeploy, Terraform, GitHub</technology_stack>
+      <responsibilities>
+        <responsibility>Trigger builds on code commits to GitHub</responsibility>
+        <responsibility>Execute unit and integration tests in CodeBuild</responsibility>
+        <responsibility>Run security scans and code quality checks</responsibility>
+        <responsibility>Deploy infrastructure changes via Terraform</responsibility>
+        <responsibility>Deploy Lambda functions with canary deployments</responsibility>
+        <responsibility>Execute automated rollback on deployment failures</responsibility>
+      </responsibilities>
+      <interfaces>
+        <interface>
+          <name>Pipeline API</name>
+          <type>REST</type>
+          <protocol>HTTPS</protocol>
+          <access>GitHub webhooks, AWS Console, CLI</access>
+        </interface>
+      </interfaces>
+      <dependencies>
+        <dependency>GitHub for source control</dependency>
+        <dependency>CodeBuild for build execution</dependency>
+        <dependency>Terraform for infrastructure deployment</dependency>
+        <dependency>CloudWatch for deployment monitoring</dependency>
+      </dependencies>
+      <nfr_mappings>NFR-006, NFR-009, NFR-013</nfr_mappings>
+    </component>
+
+    <component>
+      <name>Security Layer</name>
+      <type>Infrastructure</type>
+      <description>Multi-layer security implementation with Cognito, WAF, IAM, KMS, and VPC providing defense in depth</description>
+      <technology_stack>Cognito, WAF, IAM, KMS, VPC, Security Hub</technology_stack>
+      <responsibilities>
+        <responsibility>Authenticate users via Cognito with MFA support</responsibility>
+        <responsibility>Protect APIs with WAF rules against common attacks</responsibility>
+        <responsibility>Enforce least privilege access via IAM roles</responsibility>
+        <responsibility>Encrypt data at rest with KMS</responsibility>
+        <responsibility>Isolate Lambda functions in VPC for database access</responsibility>
+        <responsibility>Monitor security posture with Security Hub</responsibility>
+      </responsibilities>
+      <interfaces>
+        <interface>
+          <name>Authentication API</name>
+          <type>OAuth 2.0</type>
+          <protocol>HTTPS</protocol>
+          <provider>Cognito User Pool</provider>
+        </interface>
+      </interfaces>
+      <dependencies>
+        <dependency>Cognito for user authentication</dependency>
+        <dependency>WAF for API protection</dependency>
+        <dependency>KMS for encryption keys</dependency>
+        <dependency>VPC for network isolation</dependency>
+      </dependencies>
+      <nfr_mappings>NFR-007, NFR-012</nfr_mappings>
+    </component>
+  </component_architecture>
+
+  <data_

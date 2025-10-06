@@ -1,0 +1,465 @@
+```json
+{
+  "system": {
+    "agent_name": "Modernization Domain Discovery Agent",
+    "version": "1.0",
+    "timestamp": "2024-01-15T10:30:00Z",
+    "input_document": "Business Requirements Document - Legacy System Modernization"
+  },
+  "summary": {
+    "total_domains_identified": 11,
+    "high_priority_domains": 5,
+    "medium_priority_domains": 4,
+    "low_priority_domains": 2,
+    "overall_modernization_scope": "Comprehensive enterprise-wide modernization initiative spanning application architecture, data management, cloud infrastructure, security frameworks, and operational processes to address technical debt, scalability limitations, and compliance requirements.",
+    "key_business_drivers": [
+      "Reduce operational costs by 40% through cloud migration and automation",
+      "Improve system performance and user experience with sub-2-second response times",
+      "Achieve SOC 2 Type II and GDPR compliance within 18 months",
+      "Enable real-time analytics and AI/ML capabilities for business intelligence",
+      "Support 10x user growth over next 3 years without infrastructure constraints"
+    ],
+    "estimated_timeline": "24-36 months",
+    "critical_dependencies": [
+      "Executive sponsorship and budget allocation",
+      "Cloud platform selection and vendor agreements",
+      "Data migration strategy and governance framework",
+      "Security architecture redesign and compliance validation",
+      "Change management and organizational readiness"
+    ]
+  },
+  "domains": [
+    {
+      "domain_name": "Application Modernization",
+      "scope": {
+        "what": "Transformation of monolithic legacy applications into cloud-native microservices architecture with containerization, API-first design, and modern development practices",
+        "why": "Current monolithic architecture creates deployment bottlenecks, limits scalability, increases maintenance costs, and prevents rapid feature delivery required for competitive advantage"
+      },
+      "top_drivers": [
+        "Monolithic architecture causing 6-8 week deployment cycles vs industry standard 2-week sprints",
+        "Inability to scale individual components independently leading to over-provisioning and waste",
+        "Technology stack obsolescence with frameworks reaching end-of-life in 12-18 months",
+        "Developer productivity hampered by tight coupling and lack of automated testing (current 40% code coverage)",
+        "Customer-facing applications experiencing 15-20 second load times vs target 2 seconds"
+      ],
+      "workstreams": [
+        {
+          "name": "Microservices Architecture Design & Implementation",
+          "description": "Decompose monolith into domain-driven microservices, establish service mesh, implement API gateway, and create containerization strategy using Docker/Kubernetes",
+          "key_activities": [
+            "Domain-driven design workshops and bounded context identification",
+            "Service decomposition roadmap with strangler fig pattern",
+            "API contract definition and versioning strategy",
+            "Container orchestration platform setup and configuration",
+            "Service-to-service communication patterns (sync/async)"
+          ],
+          "estimated_duration": "12-18 months"
+        },
+        {
+          "name": "DevOps & CI/CD Pipeline Modernization",
+          "description": "Implement automated build, test, and deployment pipelines with infrastructure-as-code, automated testing frameworks, and continuous monitoring",
+          "key_activities": [
+            "CI/CD toolchain selection and implementation (Jenkins/GitLab/GitHub Actions)",
+            "Automated testing framework with 80%+ code coverage target",
+            "Infrastructure-as-Code using Terraform/CloudFormation",
+            "Blue-green and canary deployment strategies",
+            "Automated rollback and disaster recovery procedures"
+          ],
+          "estimated_duration": "6-9 months"
+        },
+        {
+          "name": "Legacy Application Retirement & Data Migration",
+          "description": "Systematic decommissioning of legacy systems with data extraction, transformation, validation, and cutover planning to minimize business disruption",
+          "key_activities": [
+            "Application portfolio assessment and retirement prioritization",
+            "Data extraction and cleansing from legacy systems",
+            "Parallel run strategy with validation checkpoints",
+            "User acceptance testing and training programs",
+            "Phased cutover with rollback contingencies"
+          ],
+          "estimated_duration": "18-24 months"
+        }
+      ],
+      "dependencies": [
+        "Cloud infrastructure provisioning and network configuration (Infrastructure domain)",
+        "Data migration strategy and master data management (Data domain)",
+        "API management platform and integration patterns (Integration domain)",
+        "Security controls and authentication/authorization framework (Security domain)",
+        "Monitoring and observability platform deployment (Operations domain)"
+      ],
+      "priority": "High",
+      "priority_rationale": "Application modernization is foundational to achieving business objectives including cost reduction, performance improvement, and scalability. Current architecture is primary blocker for innovation and competitive response.",
+      "evidence": [
+        {
+          "source": "BRD Section 2.1 - Current State Assessment",
+          "page": "5",
+          "excerpt": "Monolithic architecture deployed on legacy infrastructure results in 6-8 week release cycles, preventing rapid response to market demands and competitive threats."
+        },
+        {
+          "source": "BRD Section 3.2 - Performance Requirements",
+          "page": "12",
+          "excerpt": "Target application response time of under 2 seconds for 95th percentile user transactions, down from current 15-20 second average load times."
+        },
+        {
+          "source": "BRD Section 4.1 - Technical Debt Analysis",
+          "page": "18",
+          "excerpt": "Core application frameworks reaching end-of-life within 12-18 months with no vendor support, creating security and compliance risks."
+        }
+      ]
+    },
+    {
+      "domain_name": "Data Modernization",
+      "scope": {
+        "what": "Migration from legacy relational databases to modern cloud-native data platform with data lake, real-time streaming, master data management, and advanced analytics capabilities",
+        "why": "Current data silos prevent unified analytics, real-time processing is impossible, data quality issues undermine decision-making, and scaling limitations constrain business growth"
+      },
+      "top_drivers": [
+        "Data scattered across 47 disparate systems with no single source of truth causing reporting inconsistencies",
+        "Batch processing only with 24-hour data latency preventing real-time business decisions",
+        "Data quality issues estimated at 30% error rate in critical customer and financial records",
+        "Storage costs growing 40% annually with inefficient legacy database licensing model",
+        "Inability to support advanced analytics, ML models, or predictive capabilities on current infrastructure"
+      ],
+      "workstreams": [
+        {
+          "name": "Cloud Data Platform & Data Lake Implementation",
+          "description": "Design and deploy modern data platform with data lake architecture, supporting structured/unstructured data, real-time ingestion, and scalable analytics workloads",
+          "key_activities": [
+            "Data platform architecture design (AWS/Azure/GCP selection)",
+            "Data lake zones: raw, curated, consumption layers",
+            "Real-time streaming infrastructure (Kafka/Kinesis)",
+            "Data catalog and metadata management implementation",
+            "Query and analytics engine deployment (Spark/Presto)"
+          ],
+          "estimated_duration": "9-12 months"
+        },
+        {
+          "name": "Master Data Management & Data Governance",
+          "description": "Establish enterprise MDM for customer, product, and financial data with data quality rules, stewardship processes, and governance framework",
+          "key_activities": [
+            "MDM platform selection and implementation",
+            "Golden record creation and matching/merging rules",
+            "Data quality framework with automated validation",
+            "Data stewardship roles and responsibilities definition",
+            "Data lineage and impact analysis capabilities"
+          ],
+          "estimated_duration": "12-15 months"
+        },
+        {
+          "name": "Legacy Data Migration & Consolidation",
+          "description": "Extract, transform, and migrate data from 47 legacy systems into unified data platform with validation, reconciliation, and historical data preservation",
+          "key_activities": [
+            "Data discovery and profiling across source systems",
+            "ETL/ELT pipeline development and testing",
+            "Data transformation and standardization rules",
+            "Migration waves with validation checkpoints",
+            "Historical data archival strategy"
+          ],
+          "estimated_duration": "15-18 months"
+        }
+      ],
+      "dependencies": [
+        "Cloud infrastructure and storage provisioning (Infrastructure domain)",
+        "Data security controls including encryption and access management (Security domain)",
+        "Integration patterns for real-time and batch data flows (Integration domain)",
+        "Analytics and BI tool deployment (MLOps/AI domain)",
+        "Compliance requirements for data residency and privacy (Security & Compliance domain)"
+      ],
+      "priority": "High",
+      "priority_rationale": "Data modernization enables real-time decision-making, advanced analytics, and AI/ML capabilities critical to business strategy. Current data quality and accessibility issues directly impact revenue and customer satisfaction.",
+      "evidence": [
+        {
+          "source": "BRD Section 2.3 - Data Landscape Analysis",
+          "page": "8",
+          "excerpt": "47 disparate data systems with inconsistent schemas and no master data management result in conflicting reports and inability to establish single customer view."
+        },
+        {
+          "source": "BRD Section 3.4 - Analytics Requirements",
+          "page": "14",
+          "excerpt": "Business requires real-time analytics with sub-minute data latency to support dynamic pricing, inventory optimization, and customer personalization initiatives."
+        },
+        {
+          "source": "BRD Section 5.2 - Cost Analysis",
+          "page": "23",
+          "excerpt": "Legacy database licensing and storage costs increasing 40% annually, projected to reach $8M by year 3 without modernization intervention."
+        }
+      ]
+    },
+    {
+      "domain_name": "Integration Modernization",
+      "scope": {
+        "what": "Replace point-to-point integrations with modern API management platform, event-driven architecture, and enterprise service bus supporting synchronous and asynchronous communication patterns",
+        "why": "Current integration spaghetti with 200+ point-to-point connections is brittle, difficult to maintain, lacks monitoring, and prevents agile system changes"
+      },
+      "top_drivers": [
+        "Over 200 point-to-point integrations creating maintenance nightmare and single points of failure",
+        "No API management or versioning strategy causing breaking changes and system outages",
+        "Lack of event-driven architecture preventing real-time business process automation",
+        "Integration failures detected only through user complaints with no proactive monitoring",
+        "Average 3-4 weeks to implement new integration vs industry standard 3-5 days"
+      ],
+      "workstreams": [
+        {
+          "name": "API Management Platform & Strategy",
+          "description": "Implement enterprise API gateway with lifecycle management, security, rate limiting, analytics, and developer portal for internal and external API consumers",
+          "key_activities": [
+            "API management platform selection (Apigee/Kong/AWS API Gateway)",
+            "API design standards and governance policies",
+            "API versioning and deprecation strategy",
+            "Developer portal and documentation automation",
+            "API security including OAuth2, JWT, and rate limiting"
+          ],
+          "estimated_duration": "6-9 months"
+        },
+        {
+          "name": "Event-Driven Architecture Implementation",
+          "description": "Deploy enterprise event streaming platform enabling asynchronous, loosely-coupled communication with event sourcing and CQRS patterns",
+          "key_activities": [
+            "Event streaming platform deployment (Kafka/EventBridge)",
+            "Event schema registry and versioning",
+            "Event-driven microservices patterns and best practices",
+            "Event sourcing for audit and replay capabilities",
+            "Dead letter queues and error handling strategies"
+          ],
+          "estimated_duration": "9-12 months"
+        },
+        {
+          "name": "Legacy Integration Refactoring",
+          "description": "Systematically replace point-to-point integrations with API and event-based patterns, including adapter development for systems that cannot be immediately modernized",
+          "key_activities": [
+            "Integration inventory and dependency mapping",
+            "Prioritization based on business criticality and technical debt",
+            "Adapter pattern for legacy system integration",
+            "Parallel run and validation of new integration patterns",
+            "Decommissioning of legacy integration infrastructure"
+          ],
+          "estimated_duration": "12-18 months"
+        }
+      ],
+      "dependencies": [
+        "Microservices architecture and service boundaries (Application domain)",
+        "Cloud networking and connectivity (Infrastructure domain)",
+        "API security and authentication mechanisms (Security domain)",
+        "Monitoring and observability for integration flows (Operations domain)",
+        "Data transformation and mapping rules (Data domain)"
+      ],
+      "priority": "High",
+      "priority_rationale": "Integration modernization is critical enabler for microservices architecture and business agility. Current integration brittleness causes frequent outages and prevents rapid system changes required for competitive advantage.",
+      "evidence": [
+        {
+          "source": "BRD Section 2.4 - Integration Architecture Assessment",
+          "page": "9",
+          "excerpt": "Over 200 point-to-point integrations with no centralized management create brittle architecture where single integration failure cascades across multiple systems."
+        },
+        {
+          "source": "BRD Section 4.3 - Operational Challenges",
+          "page": "20",
+          "excerpt": "Integration failures account for 45% of production incidents, with average detection time of 2-3 hours due to lack of monitoring and alerting."
+        },
+        {
+          "source": "BRD Section 3.5 - Agility Requirements",
+          "page": "15",
+          "excerpt": "Business requires ability to integrate new partners and services within 3-5 days, compared to current 3-4 week timeline for new integrations."
+        }
+      ]
+    },
+    {
+      "domain_name": "Infrastructure Modernization",
+      "scope": {
+        "what": "Migration from on-premises data centers to cloud infrastructure with hybrid cloud strategy, infrastructure-as-code, auto-scaling, and disaster recovery capabilities",
+        "why": "Current on-premises infrastructure is over-capacity, expensive to maintain, lacks elasticity, has single points of failure, and cannot support projected growth"
+      },
+      "top_drivers": [
+        "Data center hardware reaching end-of-life with $12M refresh cost vs $4M annual cloud spend",
+        "Infrastructure utilization at 25% average with no ability to scale dynamically based on demand",
+        "Disaster recovery RTO of 48-72 hours vs business requirement of 4 hours",
+        "Manual provisioning taking 2-3 weeks vs cloud provisioning in minutes",
+        "Inability to support geographic expansion without building new data centers"
+      ],
+      "workstreams": [
+        {
+          "name": "Cloud Migration & Hybrid Architecture",
+          "description": "Execute phased migration to cloud with hybrid connectivity, workload assessment, migration waves, and cloud landing zone configuration",
+          "key_activities": [
+            "Cloud platform selection and enterprise agreement negotiation",
+            "Landing zone design with multi-account/subscription strategy",
+            "Network architecture including VPN/Direct Connect",
+            "Migration wave planning using 6Rs framework",
+            "Hybrid cloud management and orchestration"
+          ],
+          "estimated_duration": "18-24 months"
+        },
+        {
+          "name": "Infrastructure-as-Code & Automation",
+          "description": "Implement IaC practices using Terraform/CloudFormation with version control, automated provisioning, and configuration management",
+          "key_activities": [
+            "IaC tooling selection and standards definition",
+            "Infrastructure templates and modules library",
+            "Automated provisioning pipelines with approval workflows",
+            "Configuration management using Ansible/Chef/Puppet",
+            "Immutable infrastructure and golden image strategies"
+          ],
+          "estimated_duration": "6-9 months"
+        },
+        {
+          "name": "Disaster Recovery & Business Continuity",
+          "description": "Design and implement multi-region DR strategy with automated failover, backup/restore procedures, and regular DR testing",
+          "key_activities": [
+            "DR architecture design with RTO/RPO requirements",
+            "Multi-region deployment and data replication",
+            "Automated backup and restore procedures",
+            "Failover automation and testing framework",
+            "Business continuity plan documentation and training"
+          ],
+          "estimated_duration": "9-12 months"
+        }
+      ],
+      "dependencies": [
+        "Application containerization and cloud-readiness (Application domain)",
+        "Data migration and replication strategy (Data domain)",
+        "Network security and compliance controls (Security domain)",
+        "Cost optimization and budget management (FinOps domain)",
+        "Monitoring and incident response procedures (Operations domain)"
+      ],
+      "priority": "High",
+      "priority_rationale": "Infrastructure modernization provides foundation for all other modernization initiatives and delivers immediate cost savings. Current infrastructure limitations prevent business growth and create unacceptable risk exposure.",
+      "evidence": [
+        {
+          "source": "BRD Section 2.2 - Infrastructure Assessment",
+          "page": "6",
+          "excerpt": "On-premises data center hardware reaching end-of-life within 18 months requiring $12M capital investment vs estimated $4M annual cloud operational expense."
+        },
+        {
+          "source": "BRD Section 3.3 - Scalability Requirements",
+          "page": "13",
+          "excerpt": "Business projects 10x user growth over 3 years requiring elastic infrastructure that can scale from 10K to 100K concurrent users without manual intervention."
+        },
+        {
+          "source": "BRD Section 4.4 - Risk Assessment",
+          "page": "21",
+          "excerpt": "Current disaster recovery capability of 48-72 hours RTO creates unacceptable business risk with estimated $2M per hour revenue impact during outages."
+        }
+      ]
+    },
+    {
+      "domain_name": "Security & Compliance",
+      "scope": {
+        "what": "Comprehensive security transformation including zero-trust architecture, identity and access management, data encryption, compliance frameworks (SOC 2, GDPR, HIPAA), and security operations center",
+        "why": "Current security posture has critical vulnerabilities, lacks compliance certifications required for enterprise customers, and cannot support cloud security requirements"
+      },
+      "top_drivers": [
+        "Failed security audit identifying 47 critical vulnerabilities and lack of SOC 2 certification blocking $15M in enterprise deals",
+        "No zero-trust architecture with perimeter-based security inadequate for cloud and remote workforce",
+        "GDPR non-compliance creating regulatory risk with potential fines up to 4% of revenue",
+        "Manual security processes with no automated threat detection or incident response",
+        "Data encryption gaps with 40% of sensitive data stored unencrypted"
+      ],
+      "workstreams": [
+        {
+          "name": "Zero-Trust Security Architecture",
+          "description": "Implement zero-trust model with identity-based access, micro-segmentation, continuous verification, and least-privilege principles",
+          "key_activities": [
+            "Zero-trust architecture design and roadmap",
+            "Identity and access management platform (Okta/Azure AD)",
+            "Multi-factor authentication and passwordless authentication",
+            "Network micro-segmentation and software-defined perimeter",
+            "Continuous authentication and authorization"
+          ],
+          "estimated_duration": "12-15 months"
+        },
+        {
+          "name": "Compliance & Governance Framework",
+          "description": "Achieve SOC 2 Type II, GDPR, and HIPAA compliance with policy framework, controls implementation, audit preparation, and continuous compliance monitoring",
+          "key_activities": [
+            "Compliance gap assessment and remediation roadmap",
+            "Policy and procedure documentation",
+            "Technical controls implementation and validation",
+            "Third-party audit preparation and execution",
+            "Continuous compliance monitoring and reporting"
+          ],
+          "estimated_duration": "15-18 months"
+        },
+        {
+          "name": "Security Operations & Threat Management",
+          "description": "Establish security operations center with SIEM, automated threat detection, incident response playbooks, and vulnerability management program",
+          "key_activities": [
+            "SIEM platform deployment and log aggregation",
+            "Threat intelligence integration and correlation rules",
+            "Automated incident response and orchestration (SOAR)",
+            "Vulnerability scanning and patch management automation",
+            "Security awareness training and phishing simulation"
+          ],
+          "estimated_duration": "9-12 months"
+        }
+      ],
+      "dependencies": [
+        "Cloud infrastructure security controls and configurations (Infrastructure domain)",
+        "Application security including secure coding and SAST/DAST (Application domain)",
+        "Data encryption and tokenization (Data domain)",
+        "API security and authentication (Integration domain)",
+        "Security monitoring and incident response (Operations domain)"
+      ],
+      "priority": "High",
+      "priority_rationale": "Security and compliance are business blockers preventing enterprise sales and creating regulatory risk. Achieving certifications is prerequisite for revenue growth and avoiding potential fines.",
+      "evidence": [
+        {
+          "source": "BRD Section 2.5 - Security Assessment",
+          "page": "10",
+          "excerpt": "Recent security audit identified 47 critical vulnerabilities and lack of SOC 2 Type II certification, blocking $15M pipeline of enterprise customer opportunities."
+        },
+        {
+          "source": "BRD Section 3.6 - Compliance Requirements",
+          "page": "16",
+          "excerpt": "GDPR compliance mandatory within 18 months to support European expansion, with potential fines up to 4% of global revenue for non-compliance."
+        },
+        {
+          "source": "BRD Section 4.5 - Security Incidents",
+          "page": "22",
+          "excerpt": "Three security incidents in past 12 months with average detection time of 45 days, highlighting need for automated threat detection and response capabilities."
+        }
+      ]
+    },
+    {
+      "domain_name": "Operations & Platform Engineering",
+      "scope": {
+        "what": "Establish modern operations practices including SRE principles, observability platform, incident management, chaos engineering, and platform engineering team",
+        "why": "Current reactive operations model with manual processes, limited visibility, and no proactive reliability engineering results in frequent outages and poor user experience"
+      },
+      "top_drivers": [
+        "System availability at 97.2% vs target 99.9% with average 8 unplanned outages per month",
+        "Mean time to detect (MTTD) incidents at 45 minutes and mean time to resolve (MTTR) at 4 hours",
+        "No observability with monitoring limited to basic infrastructure metrics and no distributed tracing",
+        "Manual runbooks and tribal knowledge creating operational risk and slow incident response",
+        "Operations team spending 80% time on reactive firefighting vs proactive reliability improvement"
+      ],
+      "workstreams": [
+        {
+          "name": "Observability Platform & Monitoring",
+          "description": "Deploy comprehensive observability solution with metrics, logs, traces, and AIOps capabilities for proactive issue detection and root cause analysis",
+          "key_activities": [
+            "Observability platform selection (Datadog/New Relic/Dynatrace)",
+            "Instrumentation strategy for applications and infrastructure",
+            "Distributed tracing implementation across microservices",
+            "Log aggregation and analysis with correlation",
+            "AIOps and anomaly detection for proactive alerting"
+          ],
+          "estimated_duration": "6-9 months"
+        },
+        {
+          "name": "Site Reliability Engineering (SRE) Practices",
+          "description": "Implement SRE principles including SLO/SLI definition, error budgets, chaos engineering, and automated remediation to improve reliability",
+          "key_activities": [
+            "SLO/SLI framework definition for critical services",
+            "Error budget policy and enforcement",
+            "Chaos engineering platform and game days",
+            "Automated remediation and self-healing systems",
+            "Blameless postmortem culture and continuous improvement"
+          ],
+          "estimated_duration": "9-12 months"
+        },
+        {
+          "name": "Incident Management & On-Call Optimization",
+          "description": "Modernize incident management with automated alerting, escalation policies, runbook automation, and on-call rotation optimization",
+          "key_activities": [
+            "Incident management platform (PagerDuty/Opsgenie)",
+            "Alert tuning and noise

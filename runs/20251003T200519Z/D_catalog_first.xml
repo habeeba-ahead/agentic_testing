@@ -1,0 +1,111 @@
+```xml
+<ArchitectureSpec>
+  <Metadata>
+    <ProjectName>MVP Platform</ProjectName>
+    <Version>1.0</Version>
+    <LastUpdated>2024</LastUpdated>
+  </Metadata>
+
+  <Styles>
+    <DomainStyle>modular-monolith</DomainStyle>
+    <IntegrationStyle>event-driven</IntegrationStyle>
+    <InfraBaseline>serverless</InfraBaseline>
+  </Styles>
+
+  <DataTier>
+    <Primary>dynamodb</Primary>
+    <Secondary>aurora</Secondary>
+    <ObjectStorage>s3</ObjectStorage>
+  </DataTier>
+
+  <Patterns>
+    <Pattern name="outbox">
+      <Justification>Ensure reliable event publishing from DynamoDB to EventBridge using DynamoDB Streams</Justification>
+    </Pattern>
+    <Pattern name="api-gateway">
+      <Justification>AWS API Gateway for REST endpoints with throttling and auth</Justification>
+    </Pattern>
+    <Pattern name="circuit-breaker">
+      <Justification>Protect downstream services; implement in Lambda with exponential backoff</Justification>
+    </Pattern>
+    <Pattern name="cache-aside">
+      <Justification>Optional DAX for DynamoDB hot reads to reduce cost</Justification>
+    </Pattern>
+  </Patterns>
+
+  <Observability>
+    <Logging>structured-logs</Logging>
+    <Metrics>metrics</Metrics>
+    <Tracing>traces</Tracing>
+    <Audit>audit-logs</Audit>
+    <Implementation>
+      <Tool>CloudWatch</Tool>
+      <Tool>OTEL</Tool>
+      <Standard>JSON structured logging in Python</Standard>
+    </Implementation>
+  </Observability>
+
+  <Infrastructure>
+    <Cloud>AWS</Cloud>
+    <Runtime>Python 3.11</Runtime>
+    <Compute>Lambda</Compute>
+    <Messaging>
+      <Async>EventBridge</Async>
+      <Queue>SQS</Queue>
+    </Messaging>
+    <APILayer>API Gateway REST</APILayer>
+    <Security>
+      <IAM>true</IAM>
+      <SecretsManager>true</SecretsManager>
+      <KMS>true</KMS>
+    </Security>
+    <IaC>Terraform</IaC>
+  </Infrastructure>
+
+  <Risks>
+    <Risk>
+      <Description>Saga pattern deferred; consider for multi-step distributed transactions if complexity grows</Description>
+      <Mitigation>Start with simple compensating actions in Lambda; promote to saga orchestration if needed</Mitigation>
+    </Risk>
+    <Risk>
+      <Description>CQRS deferred; Aurora read replicas may suffice for read scaling in MVP</Description>
+      <Mitigation>Monitor read/write patterns; introduce CQRS if query complexity or scale demands separation</Mitigation>
+    </Risk>
+    <Risk>
+      <Description>Cold start latency on Lambda</Description>
+      <Mitigation>Provisioned concurrency for critical paths; optimize package size; consider SnapStart for Python</Mitigation>
+    </Risk>
+    <Risk>
+      <Description>EventBridge costs scale with event volume</Description>
+      <Mitigation>Monitor event counts; batch where possible; consider direct SQS for high-volume internal queues</Mitigation>
+    </Risk>
+    <Risk>
+      <Description>DynamoDB capacity planning for spiky write workloads</Description>
+      <Mitigation>Use on-demand billing for MVP; switch to provisioned with auto-scaling post-launch</Mitigation>
+    </Risk>
+  </Risks>
+
+  <Decisions>
+    <Decision>
+      <Title>Modular Monolith over Microservices</Title>
+      <Rationale>MVP scope favors faster iteration; deploy as single Lambda or grouped Lambdas per bounded context; refactor to microservices if team/domain boundaries emerge</Rationale>
+    </Decision>
+    <Decision>
+      <Title>Event-Driven Integration</Title>
+      <Rationale>EventBridge decouples producers/consumers; supports future extensibility without tight coupling</Rationale>
+    </Decision>
+    <Decision>
+      <Title>DynamoDB + Aurora Hybrid</Title>
+      <Rationale>DynamoDB for high-write KV workloads; Aurora Serverless v2 for relational queries and reporting; S3 for event archive and audit logs</Rationale>
+    </Decision>
+    <Decision>
+      <Title>Outbox Pattern via DynamoDB Streams</Title>
+      <Rationale>Atomic writes to DynamoDB with guaranteed event delivery via Streams to EventBridge; avoids dual-write problem</Rationale>
+    </Decision>
+    <Decision>
+      <Title>Serverless-First Cost Control</Title>
+      <Rationale>Lambda, API Gateway, DynamoDB on-demand, Aurora Serverless v2 with min capacity=0.5 ACU to cap idle costs</Rationale>
+    </Decision>
+  </Decisions>
+</ArchitectureSpec>
+```

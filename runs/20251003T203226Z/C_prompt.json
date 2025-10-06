@@ -1,0 +1,458 @@
+```json
+{
+  "system": "Legacy Mainframe Banking System",
+  "summary": "A 30-year-old COBOL-based core banking platform processing 50M+ daily transactions across retail, commercial, and wealth management. Critical pain points include 72-hour batch cycles, manual reconciliation consuming 200 FTE hours weekly, inability to support real-time payments, and escalating $12M annual maintenance costs with vendor lock-in risks.",
+  "domains": [
+    {
+      "name": "Data & Analytics Modernization",
+      "drivers": [
+        "Manual reconciliation consuming 200 FTE hours/week with 15% error rate",
+        "Siloed data across 47 systems preventing unified customer view",
+        "Regulatory reporting requiring 3-week manual compilation",
+        "No real-time fraud detection capabilities",
+        "Customer analytics limited to monthly batch reports"
+      ],
+      "workstreams": [
+        {
+          "name": "Real-Time Data Integration Platform",
+          "description": "Implement event-driven architecture with CDC from mainframe to cloud data lake, enabling sub-second data availability",
+          "outcomes": [
+            "Reduce reconciliation time by 80% (40 FTE hours/week)",
+            "Enable real-time fraud detection reducing losses by $8M annually",
+            "Unified customer 360 view across all channels"
+          ]
+        },
+        {
+          "name": "Automated Regulatory Reporting",
+          "description": "Build cloud-native reporting engine with pre-configured templates for FFIEC, FDIC, OCC compliance",
+          "outcomes": [
+            "Reduce reporting cycle from 3 weeks to 2 days",
+            "Eliminate 85% of manual data compilation effort",
+            "Improve audit trail accuracy to 99.9%"
+          ]
+        },
+        {
+          "name": "Advanced Analytics & ML Platform",
+          "description": "Deploy cloud-based ML models for credit risk, churn prediction, and personalized product recommendations",
+          "outcomes": [
+            "Increase cross-sell conversion by 35%",
+            "Reduce credit losses by 20% through better risk scoring",
+            "Enable real-time customer insights for branch staff"
+          ]
+        }
+      ],
+      "priority": "HIGH",
+      "effort_estimate": "18-24 months, $8-12M",
+      "value_potential": "$25M annual benefit (fraud reduction + efficiency gains + revenue growth)",
+      "evidence": [
+        {
+          "locator": "Section 2.2 - Current State Challenges",
+          "excerpt": "Manual reconciliation processes consume approximately 200 FTE hours per week with error rates around 15%"
+        },
+        {
+          "locator": "Section 2.2 - Current State Challenges",
+          "excerpt": "Data siloed across 47+ disparate systems...prevents holistic customer view"
+        },
+        {
+          "locator": "Section 3.1 - Business Objectives",
+          "excerpt": "Reduce operational costs by 30% within 3 years...Improve data accuracy and reporting capabilities"
+        }
+      ]
+    },
+    {
+      "name": "Application Modernization",
+      "drivers": [
+        "72-hour batch processing preventing real-time transactions",
+        "COBOL codebase with only 3 developers having expertise",
+        "Cannot support ISO 20022 or real-time payment rails",
+        "Mobile app limited to read-only balance inquiries",
+        "18-month average timeline for new product launches"
+      ],
+      "workstreams": [
+        {
+          "name": "Core Banking Platform Migration",
+          "description": "Strangler pattern migration from COBOL to microservices-based core, prioritizing payment processing and account management",
+          "outcomes": [
+            "Enable real-time payment processing (RTP, FedNow)",
+            "Reduce transaction processing time from 72 hours to <1 second",
+            "Support 10x transaction volume scalability"
+          ]
+        },
+        {
+          "name": "API-First Digital Banking Suite",
+          "description": "Build cloud-native mobile/web apps with full transactional capabilities via RESTful APIs and GraphQL",
+          "outcomes": [
+            "Increase digital adoption from 35% to 75%",
+            "Reduce branch transaction volume by 40%",
+            "Enable 3rd party fintech integrations via open banking APIs"
+          ]
+        },
+        {
+          "name": "Low-Code Product Configuration Engine",
+          "description": "Implement business-user-friendly platform for configuring loan products, fees, and workflows without code changes",
+          "outcomes": [
+            "Reduce product launch time from 18 months to 6 weeks",
+            "Enable business users to manage 80% of product changes",
+            "Accelerate time-to-market for competitive responses"
+          ]
+        }
+      ],
+      "priority": "CRITICAL",
+      "effort_estimate": "36-48 months, $25-35M",
+      "value_potential": "$45M annual benefit (new revenue channels + cost avoidance + competitive positioning)",
+      "evidence": [
+        {
+          "locator": "Section 2.2 - Current State Challenges",
+          "excerpt": "Batch processing cycles (72-hour settlement) incompatible with real-time payment expectations"
+        },
+        {
+          "locator": "Section 2.2 - Current State Challenges",
+          "excerpt": "Limited digital capabilities - mobile app restricted to balance inquiries, no transactional features"
+        },
+        {
+          "locator": "Section 3.1 - Business Objectives",
+          "excerpt": "Enable real-time payment processing...Increase digital channel adoption from 35% to 75%"
+        },
+        {
+          "locator": "Section 2.2 - Current State Challenges",
+          "excerpt": "Lengthy time-to-market for new products (average 18 months)"
+        }
+      ]
+    },
+    {
+      "name": "Cloud Infrastructure & DevOps",
+      "drivers": [
+        "On-premise infrastructure at 85% capacity with $8M upgrade needed",
+        "Manual deployment processes taking 6-8 weeks per release",
+        "No disaster recovery capability (48+ hour RTO)",
+        "Cannot scale for peak loads (month-end processing)",
+        "Security patching delayed by 90+ days due to change control"
+      ],
+      "workstreams": [
+        {
+          "name": "Hybrid Cloud Migration",
+          "description": "Migrate non-core workloads to AWS/Azure with mainframe retained for legacy core, establish cloud landing zones with FinOps",
+          "outcomes": [
+            "Reduce infrastructure costs by 40% ($4.8M annually)",
+            "Enable elastic scaling for 300% peak load handling",
+            "Achieve 99.99% uptime SLA"
+          ]
+        },
+        {
+          "name": "CI/CD Pipeline & DevSecOps",
+          "description": "Implement automated testing, security scanning, and deployment pipelines with infrastructure-as-code",
+          "outcomes": [
+            "Reduce deployment time from 6-8 weeks to 2 hours",
+            "Increase release frequency from quarterly to weekly",
+            "Shift-left security with automated vulnerability detection"
+          ]
+        },
+        {
+          "name": "Business Continuity & Disaster Recovery",
+          "description": "Establish multi-region active-active architecture with automated failover and <15 min RTO",
+          "outcomes": [
+            "Reduce RTO from 48+ hours to <15 minutes",
+            "Achieve RPO of <5 minutes for critical systems",
+            "Pass regulatory stress testing requirements"
+          ]
+        }
+      ],
+      "priority": "HIGH",
+      "effort_estimate": "24-30 months, $12-18M",
+      "value_potential": "$18M annual benefit (infrastructure savings + risk mitigation + agility gains)",
+      "evidence": [
+        {
+          "locator": "Section 2.2 - Current State Challenges",
+          "excerpt": "On-premise infrastructure nearing capacity (85% utilization) requiring $8M investment"
+        },
+        {
+          "locator": "Section 2.2 - Current State Challenges",
+          "excerpt": "Manual deployment processes requiring 6-8 weeks per release cycle"
+        },
+        {
+          "locator": "Section 2.2 - Current State Challenges",
+          "excerpt": "Inadequate disaster recovery capabilities (RTO >48 hours)"
+        },
+        {
+          "locator": "Section 3.1 - Business Objectives",
+          "excerpt": "Achieve 99.9% system uptime...Implement robust disaster recovery (RTO <1 hour)"
+        }
+      ]
+    },
+    {
+      "name": "Security & Compliance",
+      "drivers": [
+        "Increasing cyber threats with no real-time detection",
+        "Manual compliance processes for SOX, PCI-DSS, GLBA",
+        "Audit findings on access controls and data encryption",
+        "90+ day lag in security patching",
+        "No zero-trust architecture or micro-segmentation"
+      ],
+      "workstreams": [
+        {
+          "name": "Zero Trust Security Architecture",
+          "description": "Implement identity-centric security with MFA, micro-segmentation, and least-privilege access across all systems",
+          "outcomes": [
+            "Reduce security incidents by 70%",
+            "Achieve continuous compliance monitoring",
+            "Pass SOC 2 Type II and ISO 27001 audits"
+          ]
+        },
+        {
+          "name": "AI-Powered Threat Detection",
+          "description": "Deploy SIEM with ML-based anomaly detection, automated incident response, and threat intelligence integration",
+          "outcomes": [
+            "Detect threats in <5 minutes vs 30+ days currently",
+            "Reduce false positives by 80%",
+            "Automate 60% of incident response workflows"
+          ]
+        },
+        {
+          "name": "Compliance Automation Platform",
+          "description": "Build continuous compliance monitoring with automated evidence collection for SOX, PCI-DSS, GLBA, FFIEC",
+          "outcomes": [
+            "Reduce audit preparation time by 75%",
+            "Real-time compliance dashboards for regulators",
+            "Eliminate manual control testing (200 hours/quarter)"
+          ]
+        }
+      ],
+      "priority": "CRITICAL",
+      "effort_estimate": "18-24 months, $10-15M",
+      "value_potential": "$22M annual benefit (breach prevention + compliance efficiency + reputation protection)",
+      "evidence": [
+        {
+          "locator": "Section 2.2 - Current State Challenges",
+          "excerpt": "Security vulnerabilities due to outdated infrastructure and delayed patching cycles"
+        },
+        {
+          "locator": "Section 2.2 - Current State Challenges",
+          "excerpt": "Compliance burden - manual processes for SOX, PCI-DSS, GLBA reporting"
+        },
+        {
+          "locator": "Section 3.1 - Business Objectives",
+          "excerpt": "Strengthen cybersecurity posture...Ensure regulatory compliance (SOX, PCI-DSS, GLBA, FFIEC)"
+        }
+      ]
+    },
+    {
+      "name": "Customer Experience & Omnichannel",
+      "drivers": [
+        "Digital adoption only 35% vs 65% industry average",
+        "Disconnected channels requiring customers to repeat information",
+        "No personalization or contextual offers",
+        "Customer satisfaction score of 6.8/10 vs 8.2 competitor average",
+        "Cannot support modern payment methods (Zelle, Venmo-like P2P)"
+      ],
+      "workstreams": [
+        {
+          "name": "Unified Omnichannel Platform",
+          "description": "Implement customer data platform with journey orchestration across mobile, web, branch, call center, and ATM",
+          "outcomes": [
+            "Increase customer satisfaction from 6.8 to 8.5/10",
+            "Reduce call center volume by 35% via self-service",
+            "Enable seamless channel switching without re-authentication"
+          ]
+        },
+        {
+          "name": "AI-Powered Personalization Engine",
+          "description": "Deploy real-time recommendation engine using ML for next-best-action, personalized offers, and proactive alerts",
+          "outcomes": [
+            "Increase product adoption by 45%",
+            "Improve marketing ROI by 3x through targeted campaigns",
+            "Reduce customer churn by 25%"
+          ]
+        },
+        {
+          "name": "Modern Payment Experiences",
+          "description": "Enable RTP, FedNow, P2P payments, digital wallets, and embedded finance capabilities",
+          "outcomes": [
+            "Capture $15M annual revenue from payment services",
+            "Reduce payment processing costs by 30%",
+            "Enable B2B instant payments for commercial clients"
+          ]
+        }
+      ],
+      "priority": "HIGH",
+      "effort_estimate": "18-24 months, $8-12M",
+      "value_potential": "$28M annual benefit (revenue growth + retention + operational efficiency)",
+      "evidence": [
+        {
+          "locator": "Section 2.2 - Current State Challenges",
+          "excerpt": "Poor customer experience - disconnected channels, no personalization, limited self-service"
+        },
+        {
+          "locator": "Section 3.1 - Business Objectives",
+          "excerpt": "Increase digital channel adoption from 35% to 75%...Improve customer satisfaction scores by 25%"
+        },
+        {
+          "locator": "Section 2.2 - Current State Challenges",
+          "excerpt": "Inability to support modern payment rails (RTP, FedNow) and digital wallet integration"
+        }
+      ]
+    },
+    {
+      "name": "Workforce Enablement & Change Management",
+      "drivers": [
+        "Only 3 COBOL developers with mainframe expertise",
+        "Branch staff lack tools for personalized customer engagement",
+        "Resistance to change from 40% of workforce",
+        "No self-service analytics for business users",
+        "Skills gap in cloud, AI/ML, and modern development practices"
+      ],
+      "workstreams": [
+        {
+          "name": "Talent Transformation Program",
+          "description": "Reskill existing workforce in cloud, microservices, data science; hire digital natives; establish centers of excellence",
+          "outcomes": [
+            "Upskill 200+ employees in modern technologies",
+            "Reduce dependency on external consultants by 50%",
+            "Build internal cloud and AI/ML capabilities"
+          ]
+        },
+        {
+          "name": "Branch Staff Digital Toolkit",
+          "description": "Provide tablets with customer 360 view, AI-driven recommendations, and instant product configuration tools",
+          "outcomes": [
+            "Increase branch staff productivity by 40%",
+            "Improve cross-sell rates by 50%",
+            "Reduce average customer interaction time by 30%"
+          ]
+        },
+        {
+          "name": "Change Management & Adoption",
+          "description": "Executive sponsorship, communication campaigns, training programs, and incentive alignment for modernization adoption",
+          "outcomes": [
+            "Achieve 85% user adoption within 6 months of rollout",
+            "Reduce change-related incidents by 60%",
+            "Build culture of continuous improvement and innovation"
+          ]
+        }
+      ],
+      "priority": "MEDIUM",
+      "effort_estimate": "24-36 months, $5-8M",
+      "value_potential": "$12M annual benefit (productivity gains + retention + innovation velocity)",
+      "evidence": [
+        {
+          "locator": "Section 2.2 - Current State Challenges",
+          "excerpt": "Talent retention issues - only 3 developers with deep COBOL/mainframe expertise"
+        },
+        {
+          "locator": "Section 2.2 - Current State Challenges",
+          "excerpt": "Change management risks - 40% of workforce resistant to digital transformation"
+        },
+        {
+          "locator": "Section 3.1 - Business Objectives",
+          "excerpt": "Build internal capabilities in cloud, AI/ML, and modern development practices"
+        }
+      ]
+    }
+  ],
+  "recommendations": {
+    "now": [
+      {
+        "action": "Establish Modernization Program Office",
+        "rationale": "Coordinate cross-domain initiatives, manage dependencies, track $75M+ investment portfolio",
+        "timeline": "Month 1-2",
+        "investment": "$2M annually"
+      },
+      {
+        "action": "Launch Real-Time Payment Processing POC",
+        "rationale": "Critical competitive gap; FedNow mandate; validates strangler pattern for core migration",
+        "timeline": "Month 1-6",
+        "investment": "$3M",
+        "domain": "Application Modernization"
+      },
+      {
+        "action": "Implement Zero Trust Security Quick Wins",
+        "rationale": "Address audit findings; reduce breach risk; enable cloud migration",
+        "timeline": "Month 1-9",
+        "investment": "$4M",
+        "domain": "Security & Compliance"
+      },
+      {
+        "action": "Deploy Cloud Data Lake with CDC",
+        "rationale": "Foundation for analytics, ML, and real-time fraud detection; high ROI",
+        "timeline": "Month 3-12",
+        "investment": "$5M",
+        "domain": "Data & Analytics"
+      }
+    ],
+    "next": [
+      {
+        "action": "Migrate Non-Core Workloads to Cloud",
+        "rationale": "Reduce infrastructure costs; build cloud competency; avoid $8M datacenter upgrade",
+        "timeline": "Month 6-18",
+        "investment": "$8M",
+        "domain": "Cloud Infrastructure"
+      },
+      {
+        "action": "Launch Omnichannel Mobile Banking App",
+        "rationale": "Drive digital adoption from 35% to 60%; reduce branch costs; competitive parity",
+        "timeline": "Month 9-18",
+        "investment": "$6M",
+        "domain": "Customer Experience"
+      },
+      {
+        "action": "Automate Regulatory Reporting",
+        "rationale": "Reduce 3-week cycle to 2 days; free 85% of compliance staff time",
+        "timeline": "Month 12-20",
+        "investment": "$4M",
+        "domain": "Data & Analytics"
+      },
+      {
+        "action": "Implement CI/CD and DevSecOps",
+        "rationale": "Accelerate release velocity from quarterly to weekly; shift-left security",
+        "timeline": "Month 12-24",
+        "investment": "$5M",
+        "domain": "Cloud Infrastructure"
+      }
+    ],
+    "later": [
+      {
+        "action": "Complete Core Banking Platform Migration",
+        "rationale": "Full strangler pattern completion; retire mainframe; achieve target state architecture",
+        "timeline": "Month 24-48",
+        "investment": "$35M",
+        "domain": "Application Modernization"
+      },
+      {
+        "action": "Deploy AI-Powered Personalization at Scale",
+        "rationale": "Requires unified data platform and digital channels; drives 45% product adoption increase",
+        "timeline": "Month 24-36",
+        "investment": "$7M",
+        "domain": "Customer Experience"
+      },
+      {
+        "action": "Launch Embedded Finance Platform",
+        "rationale": "New revenue streams via BaaS; requires modern core and API infrastructure",
+        "timeline": "Month 30-42",
+        "investment": "$10M",
+        "domain": "Application Modernization"
+      },
+      {
+        "action": "Establish AI Center of Excellence",
+        "rationale": "Industrialize ML model development; governance; responsible AI practices",
+        "timeline": "Month 24-36",
+        "investment": "$6M",
+        "domain": "Workforce Enablement"
+      }
+    ]
+  },
+  "summary_metrics": {
+    "total_investment": "$75-110M over 4 years",
+    "expected_annual_benefit": "$150M+ (cost savings + revenue growth + risk mitigation)",
+    "payback_period": "18-24 months",
+    "critical_path": "Application Modernization → Cloud Infrastructure → Data & Analytics",
+    "highest_roi_domain": "Data & Analytics (3.1x ROI)",
+    "highest_risk_domain": "Application Modernization (complexity, duration, business continuity)",
+    "key_dependencies": [
+      "Executive sponsorship and governance",
+      "Talent acquisition and reskilling",
+      "Vendor selection for core banking platform",
+      "Regulatory approval for cloud migration",
+      "Change management and user adoption"
+    ]
+  }
+}
+```

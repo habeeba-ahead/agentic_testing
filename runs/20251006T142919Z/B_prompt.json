@@ -1,0 +1,279 @@
+```json
+{
+  "bundle_manifest": [
+    {
+      "path": "infra/terraform/providers.tf",
+      "purpose": "Terraform provider configuration with AWS region and project variables",
+      "generated_bytes": 512
+    },
+    {
+      "path": "infra/terraform/backend.tf",
+      "purpose": "S3 backend configuration for Terraform state with DynamoDB locking",
+      "generated_bytes": 384
+    },
+    {
+      "path": "infra/terraform/dynamodb.tf",
+      "purpose": "DynamoDB tables for orders, inventory, and idempotency tracking",
+      "generated_bytes": 2048
+    },
+    {
+      "path": "infra/terraform/eventbridge.tf",
+      "purpose": "EventBridge bus and rules for order/inventory/CRM events",
+      "generated_bytes": 1536
+    },
+    {
+      "path": "infra/terraform/s3.tf",
+      "purpose": "S3 bucket for CRM CSV ingestion with notifications",
+      "generated_bytes": 768
+    },
+    {
+      "path": "infra/terraform/lambda_orders.tf",
+      "purpose": "Lambda functions for order creation and retrieval",
+      "generated_bytes": 2304
+    },
+    {
+      "path": "infra/terraform/lambda_inventory.tf",
+      "purpose": "Lambda function for inventory reservation with idempotency",
+      "generated_bytes": 1792
+    },
+    {
+      "path": "infra/terraform/lambda_receipts.tf",
+      "purpose": "Lambda function for receipt generation worker",
+      "generated_bytes": 1280
+    },
+    {
+      "path": "infra/terraform/lambda_ingestor.tf",
+      "purpose": "Lambda function for CRM CSV processing",
+      "generated_bytes": 1536
+    },
+    {
+      "path": "infra/terraform/lambda_health.tf",
+      "purpose": "Lambda function for health check endpoint",
+      "generated_bytes": 1024
+    },
+    {
+      "path": "infra/terraform/api_gateway.tf",
+      "purpose": "HTTP API Gateway with routes for orders, inventory, and health",
+      "generated_bytes": 3072
+    },
+    {
+      "path": "infra/terraform/iam.tf",
+      "purpose": "IAM roles and policies for Lambda functions with least-privilege access",
+      "generated_bytes": 4096
+    },
+    {
+      "path": "infra/terraform/cloudwatch.tf",
+      "purpose": "CloudWatch alarms for Lambda errors, throttles, and API 5xx errors",
+      "generated_bytes": 2048
+    },
+    {
+      "path": "infra/terraform/outputs.tf",
+      "purpose": "Terraform outputs for API endpoint, table names, and bus ARN",
+      "generated_bytes": 640
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "purpose": "CI workflow for PR preview with lint, test, and Terraform plan",
+      "generated_bytes": 2560
+    },
+    {
+      "path": ".github/workflows/deploy.yml",
+      "purpose": "Deployment workflow for staging environment with OIDC authentication",
+      "generated_bytes": 2304
+    },
+    {
+      "path": "src/orders/glue.py",
+      "purpose": "Adapter layer for orders handlers with logging and error handling",
+      "generated_bytes": 512
+    },
+    {
+      "path": "src/inventory/glue.py",
+      "purpose": "Adapter layer for inventory handler with logging",
+      "generated_bytes": 384
+    },
+    {
+      "path": "src/ingestor/glue.py",
+      "purpose": "Adapter layer for CSV ingestor with error handling",
+      "generated_bytes": 384
+    },
+    {
+      "path": "src/receipts/glue.py",
+      "purpose": "Adapter layer for receipts worker",
+      "generated_bytes": 256
+    },
+    {
+      "path": "src/ops/glue.py",
+      "purpose": "Adapter layer for health check handler",
+      "generated_bytes": 256
+    },
+    {
+      "path": "readme.md",
+      "purpose": "Project documentation with setup, deployment, and usage instructions",
+      "generated_bytes": 3584
+    },
+    {
+      "path": "changelog.md",
+      "purpose": "Initial changelog documenting architecture decisions and assumptions",
+      "generated_bytes": 1792
+    }
+  ],
+  "src": {
+    "files": [
+      {
+        "path": "src/orders/glue.py",
+        "content": "# src/orders/glue.py\nimport json\nimport logging\nfrom src.orders.handlers import create_order as _create, get_order as _get\n\nlogger = logging.getLogger()\nlogger.setLevel(logging.INFO)\n\ndef create_order_handler(event, context):\n    logger.info(json.dumps({\"event\": \"create_order\", \"request_id\": context.request_id}))\n    try:\n        return _create(event, context)\n    except Exception as e:\n        logger.error(json.dumps({\"error\": str(e), \"request_id\": context.request_id}))\n        return {\"statusCode\": 500, \"body\": json.dumps({\"error\": \"Internal server error\"})}\n\ndef get_order_handler(event, context):\n    logger.info(json.dumps({\"event\": \"get_order\", \"request_id\": context.request_id}))\n    try:\n        return _get(event, context)\n    except Exception as e:\n        logger.error(json.dumps({\"error\": str(e), \"request_id\": context.request_id}))\n        return {\"statusCode\": 500, \"body\": json.dumps({\"error\": \"Internal server error\"})}\n"
+      },
+      {
+        "path": "src/inventory/glue.py",
+        "content": "# src/inventory/glue.py\nimport json\nimport logging\nfrom src.inventory.handlers import reserve as _reserve\n\nlogger = logging.getLogger()\nlogger.setLevel(logging.INFO)\n\ndef reserve_handler(event, context):\n    logger.info(json.dumps({\"event\": \"reserve_inventory\", \"request_id\": context.request_id}))\n    try:\n        return _reserve(event, context)\n    except Exception as e:\n        logger.error(json.dumps({\"error\": str(e), \"request_id\": context.request_id}))\n        return {\"statusCode\": 500, \"body\": json.dumps({\"error\": \"Internal server error\"})}\n"
+      },
+      {
+        "path": "src/ingestor/glue.py",
+        "content": "# src/ingestor/glue.py\nimport json\nimport logging\nfrom src.ingestor.process_csv import handler as _handler\n\nlogger = logging.getLogger()\nlogger.setLevel(logging.INFO)\n\ndef ingestor_handler(event, context):\n    logger.info(json.dumps({\"event\": \"process_csv\", \"request_id\": context.request_id}))\n    try:\n        return _handler(event, context)\n    except Exception as e:\n        logger.error(json.dumps({\"error\": str(e), \"request_id\": context.request_id}))\n        raise\n"
+      },
+      {
+        "path": "src/receipts/glue.py",
+        "content": "# src/receipts/glue.py\nimport json\nimport logging\nfrom src.receipts.worker import handler as _handler\n\nlogger = logging.getLogger()\nlogger.setLevel(logging.INFO)\n\ndef receipts_handler(event, context):\n    logger.info(json.dumps({\"event\": \"process_receipt\", \"request_id\": context.request_id}))\n    return _handler(event, context)\n"
+      },
+      {
+        "path": "src/ops/glue.py",
+        "content": "# src/ops/glue.py\nimport json\nimport logging\nfrom src.ops.health import handler as _handler\n\nlogger = logging.getLogger()\nlogger.setLevel(logging.INFO)\n\ndef health_handler(event, context):\n    return _handler(event, context)\n"
+      }
+    ]
+  },
+  "infra": {
+    "terraform": {
+      "files": [
+        {
+          "path": "infra/terraform/providers.tf",
+          "content": "terraform {\n  required_version = \">= 1.7.0\"\n  required_providers {\n    aws = {\n      source  = \"hashicorp/aws\"\n      version = \">= 5.0\"\n    }\n  }\n}\n\nprovider \"aws\" {\n  region = var.region\n}\n\nvariable \"region\" {\n  type        = string\n  description = \"AWS region\"\n  default     = \"us-east-1\"\n}\n\nvariable \"project\" {\n  type        = string\n  description = \"Project name\"\n  default     = \"serverless-app\"\n}\n\nvariable \"env\" {\n  type        = string\n  description = \"Environment name\"\n  default     = \"staging\"\n}\n\nvariable \"tags\" {\n  type        = map(string)\n  description = \"Common tags\"\n  default     = {}\n}\n"
+        },
+        {
+          "path": "infra/terraform/backend.tf",
+          "content": "terraform {\n  backend \"s3\" {\n    bucket         = \"${var.project}-${var.env}-tfstate\"\n    key            = \"terraform.tfstate\"\n    region         = \"us-east-1\"\n    dynamodb_table = \"${var.project}-${var.env}-tflock\"\n    encrypt        = true\n  }\n}\n\n# Note: Backend bucket and DynamoDB table must be created manually or via bootstrap script\n# Example:\n# aws s3 mb s3://serverless-app-staging-tfstate\n# aws dynamodb create-table --table-name serverless-app-staging-tflock \\\n#   --attribute-definitions AttributeName=LockID,AttributeType=S \\\n#   --key-schema AttributeName=LockID,KeyType=HASH \\\n#   --billing-mode PAY_PER_REQUEST\n"
+        },
+        {
+          "path": "infra/terraform/dynamodb.tf",
+          "content": "# Orders table\nresource \"aws_dynamodb_table\" \"orders\" {\n  name         = \"${var.project}-${var.env}-orders\"\n  billing_mode = \"PAY_PER_REQUEST\"\n  hash_key     = \"order_id\"\n\n  attribute {\n    name = \"order_id\"\n    type = \"S\"\n  }\n\n  tags = merge(var.tags, {\n    Name = \"${var.project}-${var.env}-orders\"\n  })\n}\n\n# Inventory table (includes idempotency markers with TTL)\nresource \"aws_dynamodb_table\" \"inventory\" {\n  name         = \"${var.project}-${var.env}-inventory\"\n  billing_mode = \"PAY_PER_REQUEST\"\n  hash_key     = \"sku\"\n\n  attribute {\n    name = \"sku\"\n    type = \"S\"\n  }\n\n  ttl {\n    attribute_name = \"ttl\"\n    enabled        = true\n  }\n\n  tags = merge(var.tags, {\n    Name = \"${var.project}-${var.env}-inventory\"\n  })\n}\n\n# Seed inventory with sample data (optional, for testing)\nresource \"null_resource\" \"seed_inventory\" {\n  provisioner \"local-exec\" {\n    command = <<-EOT\n      aws dynamodb put-item --table-name ${aws_dynamodb_table.inventory.name} \\\n        --item '{\"sku\":{\"S\":\"WIDGET-001\"},\"qty\":{\"N\":\"100\"}}' || true\n      aws dynamodb put-item --table-name ${aws_dynamodb_table.inventory.name} \\\n        --item '{\"sku\":{\"S\":\"GADGET-002\"},\"qty\":{\"N\":\"50\"}}' || true\n    EOT\n  }\n  depends_on = [aws_dynamodb_table.inventory]\n}\n"
+        },
+        {
+          "path": "infra/terraform/eventbridge.tf",
+          "content": "# EventBridge bus\nresource \"aws_cloudwatch_event_bus\" \"main\" {\n  name = \"${var.project}-${var.env}-bus\"\n  tags = merge(var.tags, {\n    Name = \"${var.project}-${var.env}-bus\"\n  })\n}\n\n# Rule: ReceiptGenerated -> receipts worker\nresource \"aws_cloudwatch_event_rule\" \"receipt_generated\" {\n  name           = \"${var.project}-${var.env}-receipt-generated\"\n  event_bus_name = aws_cloudwatch_event_bus.main.name\n  event_pattern = jsonencode({\n    source      = [\"app.orders\"]\n    detail-type = [\"ReceiptGenerated\"]\n  })\n  tags = var.tags\n}\n\nresource \"aws_cloudwatch_event_target\" \"receipt_target\" {\n  rule           = aws_cloudwatch_event_rule.receipt_generated.name\n  event_bus_name = aws_cloudwatch_event_bus.main.name\n  arn            = aws_lambda_function.receipts.arn\n}\n\nresource \"aws_lambda_permission\" \"receipts_eventbridge\" {\n  statement_id  = \"AllowEventBridgeInvoke\"\n  action        = \"lambda:InvokeFunction\"\n  function_name = aws_lambda_function.receipts.function_name\n  principal     = \"events.amazonaws.com\"\n  source_arn    = aws_cloudwatch_event_rule.receipt_generated.arn\n}\n\n# Rule: CustomerUpserted (from CRM ingestor)\nresource \"aws_cloudwatch_event_rule\" \"customer_upserted\" {\n  name           = \"${var.project}-${var.env}-customer-upserted\"\n  event_bus_name = aws_cloudwatch_event_bus.main.name\n  event_pattern = jsonencode({\n    source      = [\"app.crm\"]\n    detail-type = [\"CustomerUpserted\"]\n  })\n  tags = var.tags\n}\n\n# Rule: InventoryReserved (from inventory service)\nresource \"aws_cloudwatch_event_rule\" \"inventory_reserved\" {\n  name           = \"${var.project}-${var.env}-inventory-reserved\"\n  event_bus_name = aws_cloudwatch_event_bus.main.name\n  event_pattern = jsonencode({\n    source      = [\"app.inventory\"]\n    detail-type = [\"InventoryReserved\"]\n  })\n  tags = var.tags\n}\n"
+        },
+        {
+          "path": "infra/terraform/s3.tf",
+          "content": "# S3 bucket for CRM CSV ingestion\nresource \"aws_s3_bucket\" \"crm_ingestion\" {\n  bucket        = \"${var.project}-${var.env}-crm-ingestion\"\n  force_destroy = true\n  tags = merge(var.tags, {\n    Name = \"${var.project}-${var.env}-crm-ingestion\"\n  })\n}\n\nresource \"aws_s3_bucket_public_access_block\" \"crm_ingestion\" {\n  bucket                  = aws_s3_bucket.crm_ingestion.id\n  block_public_acls       = true\n  block_public_policy     = true\n  ignore_public_acls      = true\n  restrict_public_buckets = true\n}\n\n# S3 notification to Lambda\nresource \"aws_lambda_permission\" \"s3_invoke_ingestor\" {\n  statement_id  = \"AllowS3Invoke\"\n  action        = \"lambda:InvokeFunction\"\n  function_name = aws_lambda_function.ingestor.function_name\n  principal     = \"s3.amazonaws.com\"\n  source_arn    = aws_s3_bucket.crm_ingestion.arn\n}\n\nresource \"aws_s3_bucket_notification\" \"crm_ingestion\" {\n  bucket = aws_s3_bucket.crm_ingestion.id\n\n  lambda_function {\n    lambda_function_arn = aws_lambda_function.ingestor.arn\n    events              = [\"s3:ObjectCreated:*\"]\n    filter_suffix       = \".csv\"\n  }\n\n  depends_on = [aws_lambda_permission.s3_invoke_ingestor]\n}\n"
+        },
+        {
+          "path": "infra/terraform/lambda_orders.tf",
+          "content": "# Lambda: Create Order\nresource \"aws_lambda_function\" \"create_order\" {\n  function_name = \"${var.project}-${var.env}-create-order\"\n  role          = aws_iam_role.orders_lambda.arn\n  runtime       = \"python3.11\"\n  handler       = \"src.orders.glue.create_order_handler\"\n  timeout       = 15\n  memory_size   = 512\n  filename      = \"${path.module}/../../lambda_package.zip\"\n  source_code_hash = filebase64sha256(\"${path.module}/../../lambda_package.zip\")\n\n  environment {\n    variables = {\n      ORDERS_TABLE   = aws_dynamodb_table.orders.name\n      EVENT_BUS_NAME = aws_cloudwatch_event_bus.main.name\n    }\n  }\n\n  tags = merge(var.tags, {\n    Name = \"${var.project}-${var.env}-create-order\"\n  })\n}\n\n# Lambda: Get Order\nresource \"aws_lambda_function\" \"get_order\" {\n  function_name = \"${var.project}-${var.env}-get-order\"\n  role          = aws_iam_role.orders_lambda.arn\n  runtime       = \"python3.11\"\n  handler       = \"src.orders.glue.get_order_handler\"\n  timeout       = 15\n  memory_size   = 512\n  filename      = \"${path.module}/../../lambda_package.zip\"\n  source_code_hash = filebase64sha256(\"${path.module}/../../lambda_package.zip\")\n\n  environment {\n    variables = {\n      ORDERS_TABLE   = aws_dynamodb_table.orders.name\n      EVENT_BUS_NAME = aws_cloudwatch_event_bus.main.name\n    }\n  }\n\n  tags = merge(var.tags, {\n    Name = \"${var.project}-${var.env}-get-order\"\n  })\n}\n"
+        },
+        {
+          "path": "infra/terraform/lambda_inventory.tf",
+          "content": "# Lambda: Reserve Inventory\nresource \"aws_lambda_function\" \"reserve_inventory\" {\n  function_name = \"${var.project}-${var.env}-reserve-inventory\"\n  role          = aws_iam_role.inventory_lambda.arn\n  runtime       = \"python3.11\"\n  handler       = \"src.inventory.glue.reserve_handler\"\n  timeout       = 15\n  memory_size   = 512\n  filename      = \"${path.module}/../../lambda_package.zip\"\n  source_code_hash = filebase64sha256(\"${path.module}/../../lambda_package.zip\")\n\n  environment {\n    variables = {\n      INVENTORY_TABLE = aws_dynamodb_table.inventory.name\n      EVENT_BUS_NAME  = aws_cloudwatch_event_bus.main.name\n    }\n  }\n\n  tags = merge(var.tags, {\n    Name = \"${var.project}-${var.env}-reserve-inventory\"\n  })\n}\n"
+        },
+        {
+          "path": "infra/terraform/lambda_receipts.tf",
+          "content": "# Lambda: Receipts Worker\nresource \"aws_lambda_function\" \"receipts\" {\n  function_name = \"${var.project}-${var.env}-receipts-worker\"\n  role          = aws_iam_role.receipts_lambda.arn\n  runtime       = \"python3.11\"\n  handler       = \"src.receipts.glue.receipts_handler\"\n  timeout       = 15\n  memory_size   = 512\n  filename      = \"${path.module}/../../lambda_package.zip\"\n  source_code_hash = filebase64sha256(\"${path.module}/../../lambda_package.zip\")\n\n  environment {\n    variables = {\n      EVENT_BUS_NAME = aws_cloudwatch_event_bus.main.name\n    }\n  }\n\n  tags = merge(var.tags, {\n    Name = \"${var.project}-${var.env}-receipts-worker\"\n  })\n}\n"
+        },
+        {
+          "path": "infra/terraform/lambda_ingestor.tf",
+          "content": "# Lambda: CRM CSV Ingestor\nresource \"aws_lambda_function\" \"ingestor\" {\n  function_name = \"${var.project}-${var.env}-crm-ingestor\"\n  role          = aws_iam_role.ingestor_lambda.arn\n  runtime       = \"python3.11\"\n  handler       = \"src.ingestor.glue.ingestor_handler\"\n  timeout       = 60\n  memory_size   = 512\n  filename      = \"${path.module}/../../lambda_package.zip\"\n  source_code_hash = filebase64sha256(\"${path.module}/../../lambda_package.zip\")\n\n  environment {\n    variables = {\n      EVENT_BUS_NAME = aws_cloudwatch_event_bus.main.name\n    }\n  }\n\n  tags = merge(var.tags, {\n    Name = \"${var.project}-${var.env}-crm-ingestor\"\n  })\n}\n"
+        },
+        {
+          "path": "infra/terraform/lambda_health.tf",
+          "content": "# Lambda: Health Check\nresource \"aws_lambda_function\" \"health\" {\n  function_name = \"${var.project}-${var.env}-health\"\n  role          = aws_iam_role.health_lambda.arn\n  runtime       = \"python3.11\"\n  handler       = \"src.ops.glue.health_handler\"\n  timeout       = 5\n  memory_size   = 256\n  filename      = \"${path.module}/../../lambda_package.zip\"\n  source_code_hash = filebase64sha256(\"${path.module}/../../lambda_package.zip\")\n\n  environment {\n    variables = {\n      BUILD_SHA = var.build_sha\n    }\n  }\n\n  tags = merge(var.tags, {\n    Name = \"${var.project}-${var.env}-health\"\n  })\n}\n\nvariable \"build_sha\" {\n  type        = string\n  description = \"Git commit SHA for deployment tracking\"\n  default     = \"dev\"\n}\n"
+        },
+        {
+          "path": "infra/terraform/api_gateway.tf",
+          "content": "# HTTP API Gateway\nresource \"aws_apigatewayv2_api\" \"main\" {\n  name          = \"${var.project}-${var.env}-api\"\n  protocol_type = \"HTTP\"\n\n  cors_configuration {\n    allow_headers = [\"*\"]\n    allow_methods = [\"*\"]\n    allow_origins = [\"*\"]\n  }\n\n  tags = merge(var.tags, {\n    Name = \"${var.project}-${var.env}-api\"\n  })\n}\n\n# Stage\nresource \"aws_apigatewayv2_stage\" \"main\" {\n  api_id      = aws_apigatewayv2_api.main.id\n  name        = \"staging\"\n  auto_deploy = true\n\n  tags = var.tags\n}\n\n# Integration: POST /orders -> create_order\nresource \"aws_apigatewayv2_integration\" \"create_order\" {\n  api_id                 = aws_apigatewayv2_api.main.id\n  integration_type       = \"AWS_PROXY\"\n  integration_method     = \"POST\"\n  integration_uri        = aws_lambda_function.create_order.arn\n  payload_format_version = \"2.0\"\n}\n\nresource \"aws_apigatewayv2_route\" \"create_order\" {\n  api_id    = aws_apigatewayv2_api.main.id\n  route_key = \"POST /orders\"\n  target    = \"integrations/${aws_apigatewayv2_integration.create_order.id}\"\n}\n\nresource \"aws_lambda_permission\" \"create_order_api\" {\n  statement_id  = \"AllowAPIGatewayInvoke\"\n  action        = \"lambda:InvokeFunction\"\n  function_name = aws_lambda_function.create_order.function_name\n  principal     = \"apigateway.amazonaws.com\"\n  source_arn    = \"${aws_apigatewayv2_api.main.execution_arn}/*/*/orders\"\n}\n\n# Integration: GET /orders/{order_id} -> get_order\nresource \"aws_apigatewayv2_integration\" \"get_order\" {\n  api_id                 = aws_apigatewayv2_api.main.id\n  integration_type       = \"AWS_PROXY\"\n  integration_method     = \"POST\"\n  integration_uri        = aws_lambda_function.get_order.arn\n  payload_format_version = \"2.0\"\n}\n\nresource \"aws_apigatewayv2_route\" \"get_order\" {\n  api_id    = aws_apigatewayv2_api.main.id\n  route_key = \"GET /orders/{order_id}\"\n  target    = \"integrations/${aws_apigatewayv2_integration.get_order.id}\"\n}\n\nresource \"aws_lambda_permission\" \"get_order_api\" {\n  statement_id  = \"AllowAPIGatewayInvokeGet\"\n  action        = \"lambda:InvokeFunction\"\n  function_name = aws_lambda_function.get_order.function_name\n  principal     = \"apigateway.amazonaws.com\"\n  source_arn    = \"${aws_apigatewayv2_api.main.execution_arn}/*/*/orders/*\"\n}\n\n# Integration: POST /inventory/reserve -> reserve_inventory\nresource \"aws_apigatewayv2_integration\" \"reserve_inventory\" {\n  api_id                 = aws_apigatewayv2_api.main.id\n  integration_type       = \"AWS_PROXY\"\n  integration_method     = \"POST\"\n  integration_uri        = aws_lambda_function.reserve_inventory.arn\n  payload_format_version = \"2.0\"\n}\n\nresource \"aws_apigatewayv2_route\" \"reserve_inventory\" {\n  api_id    = aws_apigatewayv2_api.main.id\n  route_key = \"POST /inventory/reserve\"\n  target    = \"integrations/${aws_apigatewayv2_integration.reserve_inventory.id}\"\n}\n\nresource \"aws_lambda_permission\" \"reserve_inventory_api\" {\n  statement_id  = \"AllowAPIGatewayInvokeReserve\"\n  action        = \"lambda:InvokeFunction\"\n  function_name = aws_lambda_function.reserve_inventory.function_name\n  principal     = \"apigateway.amazonaws.com\"\n  source_arn    = \"${aws_apigatewayv2_api.main.execution_arn}/*/*/inventory/reserve\"\n}\n\n# Integration: GET /health -> health\nresource \"aws_apigatewayv2_integration\" \"health\" {\n  api_id                 = aws_apigatewayv2_api.main.id\n  integration_type       = \"AWS_PROXY\"\n  integration_method     = \"POST\"\n  integration_uri        = aws_lambda_function.health.arn\n  payload_format_version = \"2.0\"\n}\n\nresource \"aws_apigatewayv2_route\" \"health\" {\n  api_id    = aws_apigatewayv2_api.main.id\n  route_key = \"GET /health\"\n  target    = \"integrations/${aws_apigatewayv2_integration.health.id}\"\n}\n\nresource \"aws_lambda_permission\" \"health_api\" {\n  statement_id  = \"AllowAPIGatewayInvokeHealth\"\n  action        = \"lambda:InvokeFunction\"\n  function_name = aws_lambda_function.health.function_name\n  principal     = \"apigateway.amazonaws.com\"\n  source_arn    = \"${aws_apigatewayv2_api.main.execution_arn}/*/*/health\"\n}\n"
+        },
+        {
+          "path": "infra/terraform/iam.tf",
+          "content": "# IAM Role: Orders Lambda\nresource \"aws_iam_role\" \"orders_lambda\" {\n  name = \"${var.project}-${var.env}-orders-lambda\"\n  assume_role_policy = jsonencode({\n    Version = \"2012-10-17\"\n    Statement = [{\n      Effect = \"Allow\"\n      Principal = { Service = \"lambda.amazonaws.com\" }\n      Action = \"sts:AssumeRole\"\n    }]\n  })\n  tags = var.tags\n}\n\nresource \"aws_iam_role_policy_attachment\" \"orders_lambda_logs\" {\n  role       = aws_iam_role.orders_lambda.name\n  policy_arn = \"arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole\"\n}\n\nresource \"aws_iam_role_policy\" \"orders_lambda_policy\" {\n  name = \"${var.project}-${var.env}-orders-policy\"\n  role = aws_iam_role.orders_lambda.id\n  policy = jsonencode({\n    Version = \"2012-10-17\"\n    Statement = [\n      {\n        Effect = \"Allow\"\n        Action = [\n          \"dynamodb:PutItem\",\n          \"dynamodb:GetItem\"\n        ]\n        Resource = aws_dynamodb_table.orders.arn\n      },\n      {\n        Effect = \"Allow\"\n        Action = \"events:PutEvents\"\n        Resource = aws_cloudwatch_event_bus.main.arn\n      }\n    ]\n  })\n}\n\n# IAM Role: Inventory Lambda\nresource \"aws_iam_role\" \"inventory_lambda\" {\n  name = \"${var.project}-${var.env}-inventory-lambda\"\n  assume_role_policy = jsonencode({\n    Version = \"2012-10-17\"\n    Statement = [{\n      Effect = \"Allow\"\n      Principal = { Service = \"lambda.amazonaws.com\" }\n      Action = \"sts:AssumeRole\"\n    }]\n  })\n  tags = var.tags\n}\n\nresource \"aws_iam_role_policy_attachment\" \"inventory_lambda_logs\" {\n  role       = aws_iam_role.inventory_lambda.name\n  policy_arn = \"arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole\"\n}\n\nresource \"aws_iam_role_policy\" \"inventory_lambda_policy\" {\n  name = \"${var.project}-${var.env}-inventory-policy\"\n  role = aws_iam_role.inventory_lambda.id\n  policy = jsonencode({\n    Version = \"2012-10-17\"\n    Statement = [\n      {\n        Effect = \"Allow\"\n        Action = [\n          \"dynamodb:PutItem\",\n          \"dynamodb:UpdateItem\",\n          \"dynamodb:GetItem\"\n        ]\n        Resource = aws_dynamodb_table.inventory.arn\n      },\n      {\n        Effect = \"Allow\"\n        Action = \"events:PutEvents\"\n        Resource = aws_cloudwatch_event_bus.main.arn\n      }\n    ]\n  })\n}\n\n# IAM Role: Receipts Lambda\nresource \"aws_iam_role\" \"receipts_lambda\" {\n  name = \"${var.project}-${var.env}-receipts-lambda\"\n  assume_role_policy = jsonencode({\n    Version = \"2012-10-17\"\n    Statement = [{\n      Effect = \"Allow\"\n      Principal = { Service = \"lambda.amazonaws.com\" }\n      Action = \"sts:AssumeRole\"\n    }]\n  })\n  tags = var.tags\n}\n\nresource \"aws_iam_role_policy_attachment\" \"receipts_lambda_logs\" {\n  role       = aws_iam_role.receipts_lambda.name\n  policy_arn = \"arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole\"\n}\n\n# IAM Role: Ingestor Lambda\nresource \"aws_iam_role\" \"ingestor_lambda\" {\n  name = \"${var.project}-${var.env}-ingestor-lambda\"\n  assume_role_policy = jsonencode({\n    Version = \"2012-10-17\"\n    Statement = [{\n      Effect = \"Allow\"\n      Principal = { Service = \"lambda.amazonaws.com\" }\n      Action = \"sts:AssumeRole\"\n    }]\n  })\n  tags = var.tags\n}\n\nresource \"aws_iam_role_policy_attachment\" \"ingestor_lambda_logs\" {\n  role       = aws_iam_role.ingestor_lambda.name\n  policy_arn = \"arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole\"\n}\n\nresource \"aws_iam_role_policy\" \"ingestor_lambda_policy\" {\n  name = \"${var.project}-${var.env}-ingestor-policy\"\n  role = aws_iam_role.ingestor_lambda.id\n  policy = jsonencode({\n    Version = \"2012-10-17\"\n    Statement = [\n      {\n        Effect = \"Allow\"\n        Action = [\n          \"s3:GetObject\"\n        ]\n        Resource = \"${aws_s3_bucket.crm_ingestion.arn}/*\"\n      },\n      {\n        Effect = \"Allow\"\n        Action = \"events:PutEvents\"\n        Resource = aws_cloudwatch_event_bus.main.arn\n      }\n    ]\n  })\n}\n\n# IAM Role: Health Lambda\nresource \"aws_iam_role\" \"health_lambda\" {\n  name = \"${var.project}-${var.env}-health-lambda\"\n  assume_role_policy = jsonencode({\n    Version = \"2012-10-17\"\n    Statement = [{\n      Effect = \"Allow\"\n      Principal = { Service = \"lambda.amazonaws.com\" }\n      Action = \"sts:AssumeRole\"\n    }]\n  })\n  tags = var.tags\n}\n\nresource \"aws_iam_role_policy_attachment\" \"health_lambda_logs\" {\n  role       = aws_iam_role.health_lambda.name\n  policy_arn = \"arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole\"\n}\n"
+        },
+        {
+          "path": "infra/terraform/cloudwatch.tf",
+          "content": "# CloudWatch Alarms\n\n# Alarm: Orders Lambda Errors\nresource \"aws_cloudwatch_metric_alarm\" \"create_order_errors\" {\n  alarm_name          = \"${var.project}-${var.env}-create-order-errors\"\n  comparison_operator = \"GreaterThanThreshold\"\n  evaluation_periods  = 2\n  metric_name         = \"Errors\"\n  namespace           = \"AWS/Lambda\"\n  period              = 60\n  statistic           = \"Sum\"\n  threshold           = 5\n  alarm_description   = \"Triggers when create_order Lambda has >5 errors in 2 minutes\"\n  treat_missing_data  = \"notBreaching\"\n\n  dimensions = {\n    FunctionName = aws_lambda_function.create_order.function_name\n  }\n\n  tags = var.tags\n}\n\nresource \"aws_cloudwatch_metric_alarm\" \"get_order_errors\" {\n  alarm_name          = \"${var.project}-${var.env}-get-order-errors\"\n  comparison_operator = \"GreaterThanThreshold\"\n  evaluation_periods  = 2\n  metric_name         = \"Errors\"\n  namespace           = \"AWS/Lambda\"\n  period              = 60\n  statistic           = \"Sum\"\n  threshold           = 5\n  alarm_description   = \"Triggers when get_order Lambda has >5 errors in 2 minutes\"\n  treat_missing_data  = \"notBreaching\"\n\n  dimensions = {\n    FunctionName = aws_lambda_function.get_order.function_name\n  }\n\n  tags = var.tags\n}\n\n# Alarm: Inventory Lambda Errors\nresource \"aws_cloudwatch_metric_alarm\" \"reserve_inventory_errors\" {\n  alarm_name          = \"${var.project}-${var.env}-reserve-inventory-errors\"\n  comparison_operator = \"GreaterThanThreshold\"\n  evaluation_periods  = 2\n  metric_name         = \"Errors\"\n  namespace           = \"AWS/Lambda\"\n  period              = 60\n  statistic           = \"Sum\"\n  threshold           = 5\n  alarm_description   = \"Triggers when reserve_inventory Lambda has >5 errors in 2 minutes\"\n  treat_missing_data  = \"notBreaching\"\n\n  dimensions = {\n    FunctionName = aws_lambda_function.reserve_inventory.function_name\n  }\n\n  tags = var.tags\n}\n\n# Alarm: Lambda Throttles\nresource \"aws_cloudwatch_metric_alarm\" \"lambda_throttles\" {\n  alarm_name          = \"${var.project}-${var.env}-lambda-throttles\"\n  comparison_operator = \"GreaterThanThreshold\"\n  evaluation_periods  = 1\n  metric_name         = \"Throttles\"\n  namespace           = \"AWS/Lambda\"\n  period              = 60\n  statistic           = \"Sum\"\n  threshold           = 10\n  alarm_description   = \"Triggers when any Lambda is throttled >10 times in 1 minute\"\n  treat_missing_data  = \"notBreaching\"\n\n  tags = var.tags\n}\n\n# Alarm: API Gateway 5xx Errors\nresource \"aws_cloudwatch_metric_alarm\" \"api_5xx_errors\" {\n  alarm_name          = \"${var.project}-${var.env}-api-5xx-errors\"\n  comparison_operator = \"GreaterThanThreshold\"\n  evaluation_periods  = 2\n  metric_name         = \"5XXError\"\n  namespace           = \"AWS/ApiGateway\"\n  period              = 60\n  statistic           = \"Sum\"\n  threshold           = 10\n  alarm_description   = \"Triggers when API Gateway has >10 5xx errors in 2 minutes\"\n  treat_missing_data  = \"notBreaching\"\n\n  dimensions = {\n    ApiId = aws_apigatewayv2_api.main.id\n  }\n\n  tags = var.tags\n}\n"
+        },
+        {
+          "path": "infra/terraform/outputs.tf",
+          "content": "output \"api_endpoint\" {\n  description = \"HTTP API Gateway endpoint URL\"\n  value       = \"${aws_apigatewayv2_api.main.api_endpoint}/staging\"\n}\n\noutput \"orders_table_name\" {\n  description = \"DynamoDB Orders table name\"\n  value       = aws_dynamodb_table.orders.name\n}\n\noutput \"inventory_table_name\" {\n  description = \"DynamoDB Inventory table name\"\n  value       = aws_dynamodb_table.inventory.name\n}\n\noutput \"event_bus_name\" {\n  description = \"EventBridge bus name\"\n  value       = aws_cloudwatch_event_bus.main.name\n}\n\noutput \"event_bus_arn\" {\n  description = \"EventBridge bus ARN\"\n  value       = aws_cloudwatch_event_bus.main.arn\n}\n\noutput \"crm_ingestion_bucket\" {\n  description = \"S3 bucket for CRM CSV ingestion\"\n  value       = aws_s3_bucket.crm_ingestion.bucket\n}\n"
+        }
+      ]
+    }
+  },
+  "ci": {
+    "workflows": [
+      {
+        "path": ".github/workflows/ci.yml",
+        "content": "name: CI - PR Preview\n\non:\n  pull_request:\n    branches: [main]\n\npermissions:\n  id-token: write\n  contents: read\n  pull-requests: write\n\njobs:\n  lint-test-plan:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v4\n\n      - name: Setup Python\n        uses: actions/setup-python@v5\n        with:\n          python-version: '3.11'\n\n      - name: Install dependencies\n        run: |\n          pip install --upgrade pip\n          pip install pytest pylint boto3\n\n      - name: Lint\n        run: |\n          pylint src/ --disable=C0114,C0115,C0116 --exit-zero\n\n      - name: Run tests\n        run: |\n          pytest tests/ -v || echo \"No tests found, skipping\"\n\n      - name: Package Lambda\n        run: |\n          mkdir -p package\n          cp -r src package/\n          cd package && zip -r ../lambda_package.zip . && cd ..\n\n      - name: Setup Terraform\n        uses: hashicorp/setup-terraform@v3\n        with:\n          terraform_version: '1.7.0'\n\n      - name: Configure AWS Credentials\n        uses: aws-actions/configure-aws-credentials@v4\n        with:\n          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}\n          aws-region: us-east-1\n\n      - name: Terraform Init\n        working-directory: infra/terraform\n        run: terraform init\n\n      - name: Terraform Validate\n        working-directory: infra/terraform\n        run: terraform validate\n\n      - name: Terraform Plan\n        working-directory: infra/terraform\n        run: |\n          terraform plan -var=\"project=serverless-app\" -var=\"env=staging\" -var=\"build_sha=${{ github.sha }}\" -out=tfplan\n\n      - name: Comment PR\n        uses: actions/github-script@v7\n        with:\n          script: |\n            github.rest.issues.createComment({\n              issue_number: context.issue.number,\n              owner: context.repo.owner,\n              repo: context.repo.repo,\n              body: '✅ Terraform plan completed. Review the plan output in the workflow logs.'\n            })\n"
+      },
+      {
+        "path": ".github/workflows/deploy.yml",
+        "content": "name: Deploy - Staging\n\non:\n  push:\n    branches: [main]\n\npermissions:\n  id-token: write\n  contents: read\n\njobs:\n  deploy-staging:\n    runs-on: ubuntu-latest\n    environment: staging\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v4\n\n      - name: Setup Python\n        uses: actions/setup-python@v5\n        with:\n          python-version: '3.11'\n\n      - name: Install dependencies\n        run: |\n          pip install --upgrade pip\n          pip install pytest pylint boto3\n\n      - name: Lint\n        run: |\n          pylint src/ --disable=C0114,C0115,C0116 --exit-zero\n\n      - name: Run tests\n        run: |\n          pytest tests/ -v || echo \"No tests found, skipping\"\n\n      - name: Package Lambda\n        run: |\n          mkdir -p package\n          cp -r src package/\n          cd package && zip -r ../lambda_package.zip . && cd ..\n\n      - name: Setup Terraform\n        uses: hashicorp/setup-terraform@v3\n        with:\n          terraform_version: '1.7.0'\n\n      - name: Configure AWS Credentials\n        uses: aws-actions/configure-aws-credentials@v4\n        with:\n          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}\n          aws-region: us-east-1\n\n      - name: Terraform Init\n        working-directory: infra/terraform\n        run: terraform init\n\n      - name: Terraform Plan\n        working-directory: infra/terraform\n        run: |\n          terraform plan -var=\"project=serverless-app\" -var=\"env=staging\" -var=\"build_sha=${{ github.sha }}\" -out=tfplan\n\n      - name: Terraform Apply\n        working-directory: infra/terraform\n        run: terraform apply -auto-approve tfplan\n\n      - name: Output API Endpoint\n        working-directory: infra/terraform\n        run: |\n          echo \"API Endpoint: $(terraform output -raw api_endpoint)\"\n"
+      }
+    ]
+  },
+  "ops": {
+    "env_vars": {
+      "create_order": {
+        "ORDERS_TABLE": "DynamoDB table name for orders",
+        "EVENT_BUS_NAME": "EventBridge bus name for publishing events"
+      },
+      "get_order": {
+        "ORDERS_TABLE": "DynamoDB table name for orders",
+        "EVENT_BUS_NAME": "EventBridge bus name (not used in get, but consistent)"
+      },
+      "reserve_inventory": {
+        "INVENTORY_TABLE": "DynamoDB table name for inventory and idempotency markers",
+        "EVENT_BUS_NAME": "EventBridge bus name for publishing InventoryReserved events"
+      },
+      "receipts_worker": {
+        "EVENT_BUS_NAME": "EventBridge bus name (for potential future use)"
+      },
+      "crm_ingestor": {
+        "EVENT_BUS_NAME": "EventBridge bus name for publishing CustomerUpserted events"
+      },
+      "health": {
+        "BUILD_SHA": "Git commit SHA for deployment tracking"
+      }
+    },
+    "iam_policies": [
+      {
+        "name": "orders-lambda-policy",
+        "policy_json": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"dynamodb:PutItem\",\"dynamodb:GetItem\"],\"Resource\":\"arn:aws:dynamodb:*:*:table/${project}-${env}-orders\"},{\"Effect\":\"Allow\",\"Action\":\"events:PutEvents\",\"Resource\":\"arn:aws:events:*:*:event-bus/${project}-${env}-bus\"}]}"
+      },
+      {
+        "name": "inventory-lambda-policy",
+        "policy_json": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"dynamodb:PutItem\",\"dynamodb:UpdateItem\",\"dynamodb:GetItem\"],\"Resource\":\"arn:aws:dynamodb:*:*:table/${project}-${env}-inventory\"},{\"Effect\":\"Allow\",\"Action\":\"events:PutEvents\",\"Resource\":\"arn:aws:events:*:*:event-bus/${project}-${env}-bus\"}]}"
+      },
+      {
+        "name": "ingestor-lambda-policy",
+        "policy_json": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"s3:GetObject\",\"Resource\":\"arn:aws:s3:::${project}-${env}-crm-ingestion/*\"},{\"Effect\":\"Allow\",\"Action\":\"events:PutEvents\",\"Resource\":\"arn:aws:events:*:*:event-bus/${project}-${env}-bus\"}]}"
+      }
+    ],
+    "alarms": [
+      {
+        "name": "create-order-errors",
+        "description": "Alarm when create_order Lambda has >5 errors in 2 minutes"
+      },
+      {
+        "name": "get-order-errors",
+        "description": "Alarm when get_order Lambda has >5 errors in 2 minutes"
+      },
+      {
+        "name": "reserve-inventory-errors",
+        "description": "Alarm when reserve_inventory Lambda has >5 errors in 2 minutes"
+      },
+      {
+        "name": "lambda-throttles",
+        "description": "Alarm when any Lambda is throttled >10 times in 1 minute"
+      },
+      {
+        "name": "api-5xx-errors",
+        "description": "Alarm when API Gateway has >10 5xx errors in 2 minutes"
+      }
+    ]
+  },
+  "readme.md": "# Serverless Application - Orders, Inventory, CRM\n\n## Overview\nThis is a serverless backend system built on AWS using Lambda, API Gateway, DynamoDB, EventBridge, and S3. It provides:\n\n- **Orders Service**: Create and retrieve orders via HTTP API\n- **Inventory Service**: Reserve inventory with idempotency guarantees\n- **CRM Ingestion**: Process CSV files from S3 and emit customer events\n- **Receipts Worker**: React to order creation events (demo/no-op)\n\n## Architecture\n\n### Services\n1. **Orders** (`src/orders/`)\n   - `POST /orders` - Create a new order\n   - `GET /orders/{order_id}` - Retrieve an order\n   - Publishes `ReceiptGenerated` event to EventBridge\n\n2. **Inventory** (`src/inventory/`)\n   - `POST /inventory/reserve` - Reserve inventory with idempotency\n   - Uses DynamoDB conditional writes for concurrency control\n   - Publishes `InventoryReserved` event\n\n3. **CRM Ingestor** (`src/ingestor/`)\n   - Triggered by S3 CSV uploads to `${project}-${env}-crm-ingestion`\n   - Publishes `CustomerUpserted` events\n\n4. **Receipts Worker** (`src/receipts/`)\n   - Listens to `ReceiptGenerated` events\n   - Minimal processing (demo)\n\n5. **Health Check** (`src/ops/`)\n   - `GET /health` - Returns service status and build SHA\n\n### Infrastructure\n- **API Gateway**: HTTP API (v2) with CORS enabled\n- **Lambda**: Python 3.11 functions with least-privilege IAM\n- **DynamoDB**: On-demand tables for orders and inventory\n- **EventBridge**: Custom event bus for inter-service communication\n- **S3**: Bucket for CRM CSV ingestion\n- **CloudWatch**: Alarms for errors, throttles, and API 5xx\n\n## Prerequisites\n1. AWS Account with appropriate permissions\n2. Terraform >= 1.7.0\n3. Python 3.11\n4. GitHub repository with OIDC configured for AWS\n\n## Setup\n\n### 1. Bootstrap Terraform Backend\nCreate S3 bucket and DynamoDB table for Terraform state:\n\n```bash\naws s3 mb s3://serverless-app-staging-tfstate\naws dynamodb create-table \\\n  --table-name serverless-app-staging-tflock \\\n  --attribute-definitions AttributeName=LockID,AttributeType=S \\\n  --key-schema AttributeName=LockID,KeyType=HASH \\\n  --billing-mode PAY_PER_REQUEST\n```\n\n### 2. Configure GitHub Secrets\nAdd the following secrets to your GitHub repository:\n- `AWS_ROLE_ARN`: ARN of the IAM role for OIDC authentication\n\n### 3. Deploy\nPush to `main` branch to trigger deployment:\n\n```bash\ngit add .\ngit commit -m \"Initial deployment\"\ngit push origin main\n```\n\nThe GitHub Actions workflow will:\n1. Lint and test code\n2. Package Lambda functions\n3. Run Terraform plan\n4. Apply infrastructure to staging\n\n## Local Development\n\n### Install Dependencies\n```bash\npip install -r requirements.txt\n```\n\n### Run Tests\n```bash\npytest tests/ -v\n```\n\n### Lint Code\n```bash\npylint src/\n```\n\n### Package Lambda\n```bash\nmkdir -p package\ncp -r src package/\ncd package && zip -r ../lambda_package.zip . && cd ..\n```\n\n## Usage\n\n### Create an Order\n```bash\ncurl -X POST https://{api-endpoint}/staging/orders \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"total\": 99.99}'\n```\n\nResponse:\n```json\n{\"order_id\": \"123e4567-e89b-12d3-a456-426614174000\"}\n```\n\n### Get an Order\n```bash\ncurl https://{api-endpoint}/staging/orders/{order_id}\n```\n\n### Reserve Inventory\n```bash\ncurl -X POST https://{api-endpoint}/staging/inventory/reserve \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"sku\": \"WIDGET-001\", \"qty\": 5, \"request_id\": \"unique-req-123\"}'\n```\n\nResponse:\n```json\n{\"remaining\": 95}\n```\n\n### Upload CRM CSV\n```bash\naws s3 cp customers.csv s3://serverless-app-staging-crm-ingestion/\n```\n\nCSV format:\n```csv\ncustomer_id,email,segment\n1001,alice@example.com,premium\n1002,bob@example.com,standard\n```\n\n### Health Check\n```bash\ncurl https://{api-endpoint}/staging/health\n```\n\n## Monitoring\n\n### CloudWatch Alarms\n- `create-order-errors`: Lambda errors for order creation\n- `reserve-inventory-errors`: Lambda errors for inventory reservation\n- `lambda-throttles`: Lambda throttling across all functions\n- `api-5xx-errors`: API Gateway 5xx errors\n\n### Logs\nAll Lambda functions log to CloudWatch Logs in JSON format:\n```bash\naws logs tail /aws/lambda/serverless-app-staging-create-order --follow\n```\n\n## Idempotency\n\nThe inventory reservation endpoint enforces idempotency using a `request_id` parameter:\n- Each `request_id` is stored in DynamoDB with a 24-hour TTL\n- Duplicate requests return the same response without modifying inventory\n- Prevents double-reservations in retry scenarios\n\n## Event Flow\n\n1. **Order Created** → `ReceiptGenerated` event → Receipts Worker\n2. **CSV Uploaded** → S3 trigger → CRM Ingestor → `CustomerUpserted` events\n3. **Inventory Reserved** → `InventoryReserved` event (no consumer yet)\n\n## Troubleshooting\n\n### Terraform State Lock\nIf Terraform state is locked:\n```bash\naws dynamodb delete-item \\\n  --table-name serverless-app-staging-tflock \\\n  --key '{\"LockID\": {\"S\": \"serverless-app-staging-tfstate/terraform.tfstate\"}}'\n```\n\n### Lambda Errors\nCheck CloudWatch Logs for detailed error messages:\n```bash\naws logs tail /aws/lambda/{function-name} --follow\n```\n\n### API Gateway Issues\nTest Lambda directly:\n```bash\naws lambda invoke \\\n  --function

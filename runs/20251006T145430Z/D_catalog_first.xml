@@ -1,0 +1,425 @@
+xml
+<ArchitectureSpec>
+  <Metadata>
+    <ProjectName>Monolith Training Application Cloud Migration</ProjectName>
+    <TargetCloud>AWS</TargetCloud>
+    <Runtime>Python 3.11</Runtime>
+    <IaC>Terraform</IaC>
+  </Metadata>
+
+  <DomainStyle>
+    <Selected>microservices</Selected>
+    <Rationale>BRD explicitly requires decomposition of monolith into independent services (Course Management, User Enrollment, Authentication) with independent scaling and deployment capabilities per REQ-002, REQ-003</Rationale>
+  </DomainStyle>
+
+  <IntegrationStyle>
+    <Primary>REST</Primary>
+    <Secondary>event-driven</Secondary>
+    <Rationale>REQ-005 mandates RESTful API Gateway for backward compatibility. Event-driven added for async operations like enrollment notifications and audit logging (REQ-007, cross-service coordination REQ-010)</Rationale>
+  </IntegrationStyle>
+
+  <InfraBaseline>
+    <Selected>serverless</Selected>
+    <Components>
+      <Compute>AWS Lambda (Python 3.11)</Compute>
+      <APILayer>API Gateway (REST)</APILayer>
+      <Messaging>EventBridge, SQS</Messaging>
+      <Storage>S3 (logs, events, backups)</Storage>
+    </Components>
+    <Rationale>Guardrail specifies serverless-first to cap idle costs. Aligns with cost management GR-005 and scalability requirements SM-010</Rationale>
+  </InfraBaseline>
+
+  <DataTier>
+    <Primary>aurora</Primary>
+    <Secondary>dynamodb</Secondary>
+    <Details>
+      <AuroraServerlessV2>
+        <UseCase>Course catalog, user profiles, enrollment records (relational integrity required per REQ-004)</UseCase>
+        <Schema>Partitioned by service domain - courses, users, enrollments</Schema>
+        <Backup>Automated daily snapshots, 90-day retention (REQ-015, RPO 1 hour)</Backup>
+      </AuroraServerlessV2>
+      <DynamoDB>
+        <UseCase>Session management (REQ-006), high-write audit logs, cache layer</UseCase>
+        <Tables>
+          <Table name="Sessions" key="session_id" ttl="enabled"/>
+          <Table name="AuditLog" key="event_id" gsi="user_id, timestamp"/>
+        </Tables>
+      </DynamoDB>
+      <S3>
+        <UseCase>Event archive, log retention (90 days per REQ-007), backup storage</UseCase>
+      </S3>
+    </Details>
+    <Rationale>Aurora Serverless v2 for relational data integrity (courses, enrollments) per REQ-004. DynamoDB for distributed sessions (REQ-006) and high-write audit logs. Guardrail specifies both</Rationale>
+  </DataTier>
+
+  <Patterns>
+    <Pattern name="api-gateway">
+      <Requirement>REQ-005</Requirement>
+      <Implementation>AWS API Gateway with Lambda integration, request routing to microservices, rate limiting, authentication via Lambda authorizer</Implementation>
+      <SLA>Gateway latency under 50ms, 99.9% routing accuracy</SLA>
+    </Pattern>
+    <Pattern name="circuit-breaker">
+      <Requirement>REQ-010</Requirement>
+      <Implementation>Service-to-service communication resilience with exponential backoff, timeout configuration, fallback responses</Implementation>
+      <SLA>Graceful degradation on service failures, MTTR under 30 minutes (SM-005)</SLA>
+    </Pattern>
+    <Pattern name="cache-aside">
+      <Requirement>REQ-013</Requirement>
+      <Implementation>DynamoDB as cache layer for course catalog, 80% hit ratio target, TTL-based invalidation, write-through on updates</Implementation>
+      <SLA>30% response time improvement, cache retrieval under 100ms</SLA>
+    </Pattern>
+    <Pattern name="outbox">
+      <Requirement>REQ-003, REQ-010</Requirement>
+      <Implementation>Enrollment events written to DynamoDB outbox table, Lambda polls and publishes to EventBridge for cross-service consistency</Implementation>
+      <SLA>Eventual consistency within 5 seconds, zero data loss (GR-001)</SLA>
+    </Pattern>
+  </Patterns>
+
+  <Observability>
+    <StructuredLogs>
+      <Implementation>CloudWatch Logs with JSON format, correlation IDs for request tracing (REQ-007)</Implementation>
+      <Retention>90 days in CloudWatch, archive to S3</Retention>
+    </StructuredLogs>
+    <Metrics>
+      <Implementation>CloudWatch Metrics + OTEL for custom metrics (API response times, cache hit ratio, enrollment throughput)</Implementation>
+      <Dashboards>Real-time dashboards for SM-003, SM-004, SM-005</Dashboards>
+    </Metrics>
+    <Traces>
+      <Implementation>AWS X-Ray with OTEL integration for distributed tracing across Lambda functions and API Gateway</Implementation>
+      <Coverage>All inter-service calls, database queries, external API calls</Coverage>
+    </Traces>
+    <AuditLogs>
+      <Implementation>DynamoDB audit table for all CRUD operations, user actions, authentication events (REQ-007, GR-007)</Implementation>
+      <Compliance>GDPR-compliant logging with PII encryption via KMS</Compliance>
+    </AuditLogs>
+  </Observability>
+
+  <Security>
+    <Authentication>
+      <Requirement>REQ-001</Requirement>
+      <Implementation>Lambda authorizer with JWT tokens, role-based access control (ADMIN, USER), password policies enforced</Implementation>
+      <Storage>User credentials in Aurora with bcrypt hashing, secrets in AWS Secrets Manager</Storage>
+    </Authentication>
+    <Authorization>
+      <Implementation>IAM roles for service-to-service, API Gateway resource policies, Lambda execution roles with least privilege</Implementation>
+    </Authorization>
+    <Encryption>
+      <InTransit>TLS 1.3 for all API calls, service-to-service communication</InTransit>
+      <AtRest>KMS encryption for Aurora, DynamoDB, S3, Secrets Manager (REQ-014, GR-004)</AtRest>
+    </Encryption>
+    <NetworkIsolation>
+      <Implementation>Lambda in VPC for Aurora access, security groups, NACLs per security policy (REQ-014)</Implementation>
+    </NetworkIsolation>
+    <Scanning>
+      <Implementation>Automated vulnerability scanning in CI/CD pipeline, SAST/DAST tools, dependency checks (GR-004, GR-010)</Implementation>
+    </Scanning>
+  </Security>
+
+  <Services>
+    <Service name="AuthenticationService">
+      <Requirements>REQ-001</Requirements>
+      <Responsibilities>User login, token generation/validation, password management, role verification</Responsibilities>
+      <API>
+        <Endpoint method="POST" path="/auth/login"/>
+        <Endpoint method="POST" path="/auth/logout"/>
+        <Endpoint method="POST" path="/auth/refresh"/>
+        <Endpoint method="GET" path="/auth/validate"/>
+      </API>
+      <DataStore>Aurora (users table), DynamoDB (sessions)</DataStore>
+      <Events>
+        <Publishes>UserAuthenticated, UserLoggedOut, AuthenticationFailed</Publishes>
+      </Events>
+    </Service>
+
+    <Service name="CourseManagementService">
+      <Requirements>REQ-002</Requirements>
+      <Responsibilities>Course CRUD operations, course catalog management, course search, capacity management</Responsibilities>
+      <API>
+        <Endpoint method="POST" path="/courses"/>
+        <Endpoint method="GET" path="/courses/{id}"/>
+        <Endpoint method="PUT" path="/courses/{id}"/>
+        <Endpoint method="DELETE" path="/courses/{id}"/>
+        <Endpoint method="GET" path="/courses"/>
+      </API>
+      <DataStore>Aurora (courses table), DynamoDB (course cache)</DataStore>
+      <Events>
+        <Publishes>CourseCreated, CourseUpdated, CourseDeleted</Publishes>
+        <Subscribes>EnrollmentCompleted (for capacity updates)</Subscribes>
+      </Events>
+      <Cache>DynamoDB cache-aside pattern, 80% hit ratio target (REQ-013)</Cache>
+    </Service>
+
+    <Service name="EnrollmentService">
+      <Requirements>REQ-003</Requirements>
+      <Responsibilities>Enrollment creation, enrollment cancellation, enrollment history, capacity validation, concurrent enrollment handling</Responsibilities>
+      <API>
+        <Endpoint method="POST" path="/enrollments"/>
+        <Endpoint method="DELETE" path="/enrollments/{id}"/>
+        <Endpoint method="GET" path="/enrollments/user/{userId}"/>
+        <Endpoint method="GET" path="/enrollments/course/{courseId}"/>
+      </API>
+      <DataStore>Aurora (enrollments table), DynamoDB (outbox table)</DataStore>
+      <Events>
+        <Publishes>EnrollmentCompleted, EnrollmentCancelled, EnrollmentFailed</Publishes>
+        <Subscribes>CourseDeleted (for cleanup)</Subscribes>
+      </Events>
+      <Patterns>Outbox pattern for eventual consistency, optimistic locking for concurrent enrollments</Patterns>
+    </Service>
+
+    <Service name="ConfigurationService">
+      <Requirements>REQ-011</Requirements>
+      <Responsibilities>Centralized configuration management, environment-specific settings, feature flags</Responsibilities>
+      <API>
+        <Endpoint method="GET" path="/config/{service}/{key}"/>
+      </API>
+      <DataStore>AWS Systems Manager Parameter Store, Secrets Manager for sensitive config</DataStore>
+    </Service>
+
+    <Service name="AuditService">
+      <Requirements>REQ-007, REQ-008</Requirements>
+      <Responsibilities>Audit log aggregation, compliance reporting, event correlation</Responsibilities>
+      <DataStore>DynamoDB (audit logs), S3 (archive)</DataStore>
+      <Events>
+        <Subscribes>All domain events for audit trail</Subscribes>
+      </Events>
+    </Service>
+  </Services>
+
+  <DataMigration>
+    <Requirement>REQ-004</Requirement>
+    <Strategy>
+      <Phase name="Assessment">Schema analysis, data profiling, dependency mapping</Phase>
+      <Phase name="Preparation">Aurora Serverless v2 provisioning, schema migration with partitioning by service domain</Phase>
+      <Phase name="Migration">AWS DMS for initial bulk load, validation queries for 100% accuracy (GR-001)</Phase>
+      <Phase name="Cutover">Dual-write period, reconciliation, final sync, rollback plan within 15 minutes (GR-011)</Phase>
+    </Strategy>
+    <Validation>Automated reconciliation scripts, row counts, checksum validation, business logic validation</Validation>
+    <Rollback>Database snapshots before cutover, documented rollback procedures tested in staging</Rollback>
+  </DataMigration>
+
+  <CICD>
+    <Requirement>REQ-012</Requirement>
+    <Pipeline>
+      <Stage name="Build">Python package build, dependency resolution, Docker image creation</Stage>
+      <Stage name="Test">Unit tests (80% coverage per GR-010), integration tests, security scanning (SAST)</Stage>
+      <Stage name="Deploy-Staging">Terraform apply to staging, smoke tests, performance tests</Stage>
+      <Stage name="Approval">Manual approval gate for production (GR-008)</Stage>
+      <Stage name="Deploy-Production">Blue-green deployment via Lambda aliases, automated rollback on failure</Stage>
+    </Pipeline>
+    <Tools>
+      <SourceControl>Git with branch protection</SourceControl>
+      <CI>AWS CodePipeline, CodeBuild</CI>
+      <IaC>Terraform with state in S3, DynamoDB locking</IaC>
+      <Testing>pytest, locust (load testing), OWASP ZAP (security)</Testing>
+    </Tools>
+    <Rollback>Lambda version rollback within 5 minutes, database restore within 4 hours (RTO per REQ-015)</Rollback>
+  </CICD>
+
+  <DisasterRecovery>
+    <Requirement>REQ-015</Requirement>
+    <RTO>4 hours</RTO>
+    <RPO>1 hour</RPO>
+    <Strategy>
+      <Backup>Aurora automated backups (daily), DynamoDB point-in-time recovery, S3 versioning</Backup>
+      <MultiRegion>Primary region with cross-region Aurora replica for DR failover capability</MultiRegion>
+      <Testing>Quarterly DR drills, documented runbooks, automated failover scripts</Testing>
+    </Strategy>
+    <Monitoring>CloudWatch alarms for service health, automated incident response via Lambda, PagerDuty integration</Monitoring>
+  </DisasterRecovery>
+
+  <Compliance>
+    <Requirement>REQ-014, GR-007</Requirement>
+    <GDPR>
+      <DataResidency>EU region deployment option, data sovereignty controls</DataResidency>
+      <RightToErasure>Automated user data deletion workflows</RightToErasure>
+      <Encryption>KMS encryption for all PII, audit logs for data access</Encryption>
+    </GDPR>
+    <Auditing>Quarterly compliance reviews, penetration testing, security certifications</Auditing>
+  </Compliance>
+
+  <CostManagement>
+    <Requirement>GR-005</Requirement>
+    <Target>Not exceed 120% of current operational costs in year 1</Target>
+    <Strategy>
+      <Serverless>Lambda pay-per-invocation, Aurora Serverless v2 auto-scaling, DynamoDB on-demand</Serverless>
+      <Monitoring>AWS Cost Explorer, budget alerts at 80% and 100% thresholds</Monitoring>
+      <Optimization>Reserved capacity for predictable workloads after 6 months, S3 lifecycle policies for log archival</Optimization>
+    </Strategy>
+  </CostManagement>
+
+  <PerformanceSLAs>
+    <API>
+      <ResponseTime>95th percentile under 500ms (SM-003)</ResponseTime>
+      <GatewayLatency>Under 50ms (REQ-005)</GatewayLatency>
+      <Availability>99.9% uptime (SM-002, GR-006)</Availability>
+    </API>
+    <Database>
+      <QueryPerformance>At least parity with monolith (GR-003)</QueryPerformance>
+      <ConnectionPooling>Optimized for Lambda with RDS Proxy</ConnectionPooling>
+    </Database>
+    <Cache>
+      <HitRatio>80% for course data (REQ-013)</HitRatio>
+      <Latency>Under 100ms retrieval (REQ-006)</Latency>
+    </Cache>
+  </PerformanceSLAs>
+
+  <Risks>
+    <Risk id="RISK-001">
+      <Description>Lambda cold start latency may impact 500ms SLA for authentication</Description>
+      <Mitigation>Provisioned concurrency for auth Lambda, connection pooling via RDS Proxy</Mitigation>
+      <FutureOption>Consider ECS Fargate for latency-sensitive services if serverless insufficient</FutureOption>
+    </Risk>
+    <Risk id="RISK-002">
+      <Description>Eventual consistency in outbox pattern may cause temporary enrollment status discrepancies</Description>
+      <Mitigation>5-second consistency window acceptable per business, compensating transactions for failures</Mitigation>
+      <FutureOption>Saga pattern for complex multi-service transactions if needed</FutureOption>
+    </Risk>
+    <Risk id="RISK-003">
+      <Description>Aurora Serverless v2 scaling lag during sudden traffic spikes</Description>
+      <Mitigation>Pre-warm capacity during known peak periods, DynamoDB cache reduces database load</Mitigation>
+      <FutureOption>Aurora provisioned instances for predictable high-load services</FutureOption>
+    </Risk>
+    <Risk id="RISK-004">
+      <Description>API Gateway throttling limits may impact concurrent enrollment scenarios</Description>
+      <Mitigation>Request quota increase from AWS, SQS queue for enrollment processing to smooth spikes</Mitigation>
+      <FutureOption>Application Load Balancer with ECS if Gateway limits insufficient</FutureOption>
+    </Risk>
+    <Risk id="RISK-005">
+      <Description>Cross-service distributed tracing overhead may impact performance</Description>
+      <Mitigation>Sampling strategy (10% trace rate initially), async trace publishing</Mitigation>
+      <FutureOption>Adjust sampling based on production metrics</FutureOption>
+    </Risk>
+    <Risk id="RISK-006">
+      <Description>Vendor lock-in with AWS-specific services (Lambda, EventBridge, DynamoDB)</Description>
+      <Mitigation>Abstraction layers for data access, event publishing; documented migration paths</Mitigation>
+      <FutureOption>Kubernetes with Knative for portable serverless if multi-cloud required (GR-012)</FutureOption>
+    </Risk>
+    <Risk id="RISK-007">
+      <Description>Session management in DynamoDB may have consistency issues during failover</Description>
+      <Mitigation>DynamoDB global tables for multi-region, session re-authentication on validation failure</Mitigation>
+      <FutureOption>ElastiCache for Redis if stronger consistency needed</FutureOption>
+    </Risk>
+    <Risk id="RISK-008">
+      <Description>CQRS pattern not implemented may limit read scalability for reporting</Description>
+      <Mitigation>DynamoDB cache and read replicas provide sufficient read scaling for MVP</Mitigation>
+      <FutureOption>Implement CQRS with separate read models if reporting requirements grow</FutureOption>
+    </Risk>
+  </Risks>
+
+  <SuccessCriteria>
+    <Criterion id="SC-001">
+      <Metric>SM-001 Migration Completion Rate</Metric>
+      <Target>100% core functionality migrated within 12 months</Target>
+      <Validation>Monthly feature parity checklist, automated regression testing</Validation>
+    </Criterion>
+    <Criterion id="SC-002">
+      <Metric>SM-002 System Availability</Metric>
+      <Target>99.9% uptime</Target>
+      <Validation>CloudWatch uptime monitoring, monthly SLA reports</Validation>
+    </Criterion>
+    <Criterion id="SC-003">
+      <Metric>SM-003 API Response Time</Metric>
+      <Target>95th percentile under 500ms</Target>
+      <Validation>X-Ray tracing, CloudWatch metrics, load testing</Validation>
+    </Criterion>
+    <Criterion id="SC-004">
+      <Metric>SM-005 MTTR</Metric>
+      <Target>Under 30 minutes for critical issues</Target>
+      <Validation>Incident management tracking, post-mortem analysis</Validation>
+    </Criterion>
+    <Criterion id="SC-005">
+      <Metric>SM-009 Data Integrity</Metric>
+      <Target>100% data integrity, zero data loss</Target>
+      <Validation>Weekly automated reconciliation, checksum validation</Validation>
+    </Criterion>
+    <Criterion id="SC-006">
+      <Metric>GR-001 Zero Data Loss</Metric>
+      <Target>No data loss during migration or operations</Target>
+      <Validation>Continuous data validation, backup verification</Validation>
+    </Criterion>
+    <Criterion id="SC-007">
+      <Metric>GR-002 Backward Compatibility</Metric>
+      <Target>All existing API endpoints functional</Target>
+      <Validation>Contract testing, client integration testing</Validation>
+    </Criterion>
+    <Criterion id="SC-008">
+      <Metric>GR-005 Cost Management</Metric>
+      <Target>Cloud costs not exceed 120% of current costs in year 1</Target>
+      <Validation>Monthly cost reviews, budget alerts</Validation>
+    </Criterion>
+  </SuccessCriteria>
+
+  <MigrationPhases>
+    <Phase name="Foundation" duration="Months 1-2">
+      <Activities>
+        <Activity>AWS account setup, IAM roles, networking (VPC, subnets, security groups)</Activity>
+        <Activity>Terraform infrastructure as code foundation</Activity>
+        <Activity>CI/CD pipeline setup (CodePipeline, CodeBuild)</Activity>
+        <Activity>Observability infrastructure (CloudWatch, X-Ray, dashboards)</Activity>
+        <Activity>Aurora Serverless v2 and DynamoDB provisioning</Activity>
+      </Activities>
+      <Deliverables>Operational AWS environment, IaC repository, CI/CD pipelines</Deliverables>
+    </Phase>
+    <Phase name="Authentication Migration" duration="Months 2-3">
+      <Activities>
+        <Activity>AuthenticationService development and testing (REQ-001)</Activity>
+        <Activity>User data migration to Aurora</Activity>
+        <Activity>Session management in DynamoDB (REQ-006)</Activity>
+        <Activity>API Gateway setup with Lambda authorizer</Activity>
+      </Activities>
+      <Deliverables>Functional authentication service, migrated user data, API Gateway</Deliverables>
+    </Phase>
+    <Phase name="Course Management Migration" duration="Months 3-5">
+      <Activities>
+        <Activity>CourseManagementService development (REQ-002)</Activity>
+        <Activity>Course data migration with validation</Activity>
+        <Activity>Cache layer implementation (REQ-013)</Activity>
+        <Activity>API endpoint migration with backward compatibility</Activity>
+      </Activities>
+      <Deliverables>Operational course service, migrated course catalog, caching layer</Deliverables>
+    </Phase>
+    <Phase name="Enrollment Migration" duration="Months 5-7">
+      <Activities>
+        <Activity>EnrollmentService development (REQ-003)</Activity>
+        <Activity>Outbox pattern implementation for consistency</Activity>
+        <Activity>Enrollment data migration and validation</Activity>
+        <Activity>EventBridge integration for cross-service events</Activity>
+      </Activities>
+      <Deliverables>Operational enrollment service, event-driven architecture, migrated enrollments</Deliverables>
+    </Phase>
+    <Phase name="Integration and Testing" duration="Months 7-9">
+      <Activities>
+        <Activity>End-to-end integration testing</Activity>
+        <Activity>Performance testing and optimization (REQ-013)</Activity>
+        <Activity>Security hardening and penetration testing (REQ-014)</Activity>
+        <Activity>Load testing for 3x capacity (SM-010)</Activity>
+        <Activity>DR testing and validation (REQ-015)</Activity>
+      </Activities>
+      <Deliverables>Validated system performance, security certification, DR procedures</Deliverables>
+    </Phase>
+    <Phase name="Cutover and Stabilization" duration="Months 9-12">
+      <Activities>
+        <Activity>Production cutover with rollback plan</Activity>
+        <Activity>Parallel run with monolith for validation</Activity>
+        <Activity>Monitoring and incident response</Activity>
+        <Activity>Performance tuning and optimization</Activity>
+        <Activity>Documentation completion (GR-009)</Activity>
+        <Activity>Team training and knowledge transfer</Activity>
+      </Activities>
+      <Deliverables>Production system operational, monolith decommissioned, complete documentation</Deliverables>
+    </Phase>
+  </MigrationPhases>
+
+  <Documentation>
+    <Requirement>GR-009</Requirement>
+    <Artifacts>
+      <Artifact>Architecture diagrams (C4 model: context, container, component)</Artifact>
+      <Artifact>API documentation (OpenAPI/Swagger specifications)</Artifact>
+      <Artifact>Operational runbooks (deployment, rollback, DR procedures)</Artifact>
+      <Artifact>Data migration procedures and validation scripts</Artifact>
+      <Artifact>Security policies and compliance documentation</Artifact>
+      <Artifact>Performance testing results and benchmarks</Artifact>
+      <Artifact>Cost analysis and optimization recommendations</Artifact>
+    </Artifacts>
+  </Documentation>
+</ArchitectureSpec>

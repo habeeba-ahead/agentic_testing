@@ -1,0 +1,686 @@
+xml
+<?xml version="1.0" encoding="UTF-8"?>
+<ArchitectureSpec>
+  <Metadata>
+    <ProjectName>Monolith Java Application Cloud Migration and Modernization</ProjectName>
+    <TargetCloud>AWS</TargetCloud>
+    <ArchitecturePattern>Microservices with Event-Driven Architecture</ArchitecturePattern>
+    <InfrastructureApproach>Serverless-First</InfrastructureApproach>
+    <IaCTool>Terraform</IaCTool>
+  </Metadata>
+
+  <ArchitecturePatterns>
+    <Pattern>
+      <Name>Strangler Fig Migration</Name>
+      <Description>Incrementally replace monolith functionality with microservices while maintaining operational continuity</Description>
+      <Rationale>Enables gradual migration with reduced risk and ability to rollback individual services</Rationale>
+    </Pattern>
+    <Pattern>
+      <Name>API Gateway Facade</Name>
+      <Description>Unified entry point for all microservices with routing, authentication, and rate limiting</Description>
+      <Rationale>Provides centralized API management and decouples clients from service topology</Rationale>
+    </Pattern>
+    <Pattern>
+      <Name>Event-Driven Architecture</Name>
+      <Description>Asynchronous communication between services using EventBridge and SQS</Description>
+      <Rationale>Enables loose coupling, scalability, and resilience for order processing workflows</Rationale>
+    </Pattern>
+    <Pattern>
+      <Name>Database per Service</Name>
+      <Description>Each microservice owns its data store with appropriate database technology</Description>
+      <Rationale>Enables independent scaling and technology choices per service domain</Rationale>
+    </Pattern>
+    <Pattern>
+      <Name>CQRS for Order Processing</Name>
+      <Description>Separate read and write models for order service to optimize performance</Description>
+      <Rationale>Handles high-throughput order writes while maintaining fast query performance</Rationale>
+    </Pattern>
+    <Pattern>
+      <Name>Circuit Breaker</Name>
+      <Description>Prevent cascading failures in service-to-service communication</Description>
+      <Rationale>Improves resilience and prevents resource exhaustion during partial outages</Rationale>
+    </Pattern>
+    <Pattern>
+      <Name>Saga Pattern</Name>
+      <Description>Distributed transaction management for order processing workflow</Description>
+      <Rationale>Maintains data consistency across services without distributed locks</Rationale>
+    </Pattern>
+    <Pattern>
+      <Name>Cache-Aside</Name>
+      <Description>Application-managed caching for product catalog and user data</Description>
+      <Rationale>Reduces database load and improves response times for read-heavy operations</Rationale>
+    </Pattern>
+  </ArchitecturePatterns>
+
+  <Services>
+    <Service>
+      <ServiceName>user-service</ServiceName>
+      <BusinessRequirementID>BR-001</BusinessRequirementID>
+      <Description>User authentication, registration, and profile management</Description>
+      <Runtime>Python 3.11</Runtime>
+      <ComputePattern>AWS Lambda with Function URLs</ComputePattern>
+      <Scaling>
+        <Type>Automatic</Type>
+        <MinInstances>0</MinInstances>
+        <MaxInstances>1000</MaxInstances>
+        <TargetMetric>Concurrent executions</TargetMetric>
+      </Scaling>
+      <DataStore>
+        <Primary>
+          <Type>DynamoDB</Type>
+          <Name>users-table</Name>
+          <Rationale>High-write user operations with single-table design for user profiles</Rationale>
+          <Capacity>On-Demand</Capacity>
+        </Primary>
+        <Cache>
+          <Type>DynamoDB DAX</Type>
+          <Name>users-cache</Name>
+          <TTL>300</TTL>
+        </Cache>
+      </DataStore>
+      <APIs>
+        <Endpoint>
+          <Path>/users</Path>
+          <Method>POST</Method>
+          <Description>User registration</Description>
+        </Endpoint>
+        <Endpoint>
+          <Path>/users/auth</Path>
+          <Method>POST</Method>
+          <Description>User authentication</Description>
+        </Endpoint>
+        <Endpoint>
+          <Path>/users/{userId}</Path>
+          <Method>GET</Method>
+          <Description>Get user profile</Description>
+        </Endpoint>
+        <Endpoint>
+          <Path>/users/{userId}</Path>
+          <Method>PUT</Method>
+          <Description>Update user profile</Description>
+        </Endpoint>
+      </APIs>
+      <Security>
+        <Authentication>JWT tokens via API Gateway authorizer</Authentication>
+        <Encryption>
+          <AtRest>KMS encryption for DynamoDB</AtRest>
+          <InTransit>TLS 1.3</InTransit>
+        </Encryption>
+        <Secrets>AWS Secrets Manager for credentials</Secrets>
+      </Security>
+      <Observability>
+        <Logging>CloudWatch Logs with structured JSON</Logging>
+        <Metrics>CloudWatch custom metrics</Metrics>
+        <Tracing>AWS X-Ray with OTEL</Tracing>
+      </Observability>
+    </Service>
+
+    <Service>
+      <ServiceName>product-service</ServiceName>
+      <BusinessRequirementID>BR-002</BusinessRequirementID>
+      <Description>Product catalog management, search, and inventory tracking</Description>
+      <Runtime>Python 3.11</Runtime>
+      <ComputePattern>AWS Lambda with Function URLs</ComputePattern>
+      <Scaling>
+        <Type>Automatic</Type>
+        <MinInstances>0</MinInstances>
+        <MaxInstances>1000</MaxInstances>
+        <TargetMetric>Concurrent executions</TargetMetric>
+      </Scaling>
+      <DataStore>
+        <Primary>
+          <Type>Aurora Serverless v2 PostgreSQL</Type>
+          <Name>products-db</Name>
+          <Rationale>Relational data with complex queries for product catalog and categorization</Rationale>
+          <Capacity>
+            <MinACU>0.5</MinACU>
+            <MaxACU>16</MaxACU>
+          </Capacity>
+        </Primary>
+        <Cache>
+          <Type>DynamoDB</Type>
+          <Name>product-cache-table</Name>
+          <TTL>600</TTL>
+          <Rationale>Cache frequently accessed product data to reduce Aurora load</Rationale>
+        </Cache>
+        <Search>
+          <Type>Aurora PostgreSQL Full-Text Search</Type>
+          <Description>Native PostgreSQL search for product queries</Description>
+        </Search>
+      </DataStore>
+      <APIs>
+        <Endpoint>
+          <Path>/products</Path>
+          <Method>GET</Method>
+          <Description>List products with pagination</Description>
+        </Endpoint>
+        <Endpoint>
+          <Path>/products/{productId}</Path>
+          <Method>GET</Method>
+          <Description>Get product details</Description>
+        </Endpoint>
+        <Endpoint>
+          <Path>/products</Path>
+          <Method>POST</Method>
+          <Description>Create product</Description>
+        </Endpoint>
+        <Endpoint>
+          <Path>/products/{productId}</Path>
+          <Method>PUT</Method>
+          <Description>Update product</Description>
+        </Endpoint>
+        <Endpoint>
+          <Path>/products/search</Path>
+          <Method>GET</Method>
+          <Description>Search products</Description>
+        </Endpoint>
+      </APIs>
+      <EventPublishing>
+        <Event>
+          <Name>ProductCreated</Name>
+          <Target>EventBridge</Target>
+          <Bus>product-events</Bus>
+        </Event>
+        <Event>
+          <Name>ProductUpdated</Name>
+          <Target>EventBridge</Target>
+          <Bus>product-events</Bus>
+        </Event>
+        <Event>
+          <Name>InventoryChanged</Name>
+          <Target>EventBridge</Target>
+          <Bus>product-events</Bus>
+        </Event>
+      </EventPublishing>
+      <Security>
+        <Authentication>API Gateway JWT authorizer</Authentication>
+        <Authorization>IAM roles for Lambda execution</Authorization>
+        <Encryption>
+          <AtRest>KMS encryption for Aurora and DynamoDB</AtRest>
+          <InTransit>TLS 1.3</InTransit>
+        </Encryption>
+      </Security>
+      <Observability>
+        <Logging>CloudWatch Logs with structured JSON</Logging>
+        <Metrics>CloudWatch custom metrics for cache hit ratio</Metrics>
+        <Tracing>AWS X-Ray with OTEL</Tracing>
+      </Observability>
+    </Service>
+
+    <Service>
+      <ServiceName>order-service</ServiceName>
+      <BusinessRequirementID>BR-003</BusinessRequirementID>
+      <Description>Order processing, state management, and fulfillment orchestration</Description>
+      <Runtime>Python 3.11</Runtime>
+      <ComputePattern>AWS Lambda with Step Functions for workflow orchestration</ComputePattern>
+      <Scaling>
+        <Type>Automatic</Type>
+        <MinInstances>0</MinInstances>
+        <MaxInstances>1000</MaxInstances>
+        <TargetMetric>Concurrent executions</TargetMetric>
+      </Scaling>
+      <DataStore>
+        <Write>
+          <Type>DynamoDB</Type>
+          <Name>orders-write-table</Name>
+          <Rationale>High-throughput order writes with single-table design</Rationale>
+          <Capacity>On-Demand</Capacity>
+          <Streams>Enabled for CQRS read model sync</Streams>
+        </Write>
+        <Read>
+          <Type>Aurora Serverless v2 PostgreSQL</Type>
+          <Name>orders-read-db</Name>
+          <Rationale>Complex order queries and reporting</Rationale>
+          <Capacity>
+            <MinACU>0.5</MinACU>
+            <MaxACU>8</MaxACU>
+          </Capacity>
+        </Read>
+        <EventStore>
+          <Type>S3</Type>
+          <Name>order-events-bucket</Name>
+          <Rationale>Immutable audit trail of all order events</Rationale>
+        </EventStore>
+      </DataStore>
+      <Workflow>
+        <Orchestrator>AWS Step Functions</Orchestrator>
+        <Pattern>Saga with compensation</Pattern>
+        <Steps>
+          <Step>ValidateOrder</Step>
+          <Step>ReserveInventory</Step>
+          <Step>ProcessPayment</Step>
+          <Step>CreateShipment</Step>
+          <Step>UpdateOrderStatus</Step>
+        </Steps>
+      </Workflow>
+      <APIs>
+        <Endpoint>
+          <Path>/orders</Path>
+          <Method>POST</Method>
+          <Description>Create order</Description>
+        </Endpoint>
+        <Endpoint>
+          <Path>/orders/{orderId}</Path>
+          <Method>GET</Method>
+          <Description>Get order details</Description>
+        </Endpoint>
+        <Endpoint>
+          <Path>/orders/{orderId}/status</Path>
+          <Method>GET</Method>
+          <Description>Get order status</Description>
+        </Endpoint>
+        <Endpoint>
+          <Path>/orders</Path>
+          <Method>GET</Method>
+          <Description>List user orders</Description>
+        </Endpoint>
+      </APIs>
+      <EventPublishing>
+        <Event>
+          <Name>OrderCreated</Name>
+          <Target>EventBridge</Target>
+          <Bus>order-events</Bus>
+        </Event>
+        <Event>
+          <Name>OrderStatusChanged</Name>
+          <Target>EventBridge</Target>
+          <Bus>order-events</Bus>
+        </Event>
+        <Event>
+          <Name>PaymentProcessed</Name>
+          <Target>EventBridge</Target>
+          <Bus>order-events</Bus>
+        </Event>
+        <Event>
+          <Name>OrderFulfilled</Name>
+          <Target>EventBridge</Target>
+          <Bus>order-events</Bus>
+        </Event>
+      </EventPublishing>
+      <EventSubscriptions>
+        <Subscription>
+          <Source>product-events</Source>
+          <EventType>InventoryChanged</EventType>
+          <Handler>UpdateInventoryAvailability</Handler>
+        </Subscription>
+      </EventSubscriptions>
+      <Queues>
+        <Queue>
+          <Name>order-processing-queue</Name>
+          <Type>SQS FIFO</Type>
+          <Purpose>Ensure ordered processing of order events</Purpose>
+          <DLQ>order-processing-dlq</DLQ>
+        </Queue>
+        <Queue>
+          <Name>payment-processing-queue</Name>
+          <Type>SQS Standard</Type>
+          <Purpose>Async payment processing</Purpose>
+          <DLQ>payment-processing-dlq</DLQ>
+        </Queue>
+      </Queues>
+      <Security>
+        <Authentication>API Gateway JWT authorizer</Authentication>
+        <Authorization>IAM roles with least privilege</Authorization>
+        <Encryption>
+          <AtRest>KMS encryption for all data stores</AtRest>
+          <InTransit>TLS 1.3</InTransit>
+        </Encryption>
+        <Compliance>PCI DSS for payment data handling</Compliance>
+        <AuditLog>All order operations logged to S3</AuditLog>
+      </Security>
+      <Observability>
+        <Logging>CloudWatch Logs with structured JSON</Logging>
+        <Metrics>CloudWatch custom metrics for order throughput</Metrics>
+        <Tracing>AWS X-Ray with OTEL for distributed tracing</Tracing>
+        <Alarms>
+          <Alarm>Order processing failures</Alarm>
+          <Alarm>Payment processing errors</Alarm>
+          <Alarm>DLQ message count</Alarm>
+        </Alarms>
+      </Observability>
+    </Service>
+
+    <Service>
+      <ServiceName>session-service</ServiceName>
+      <BusinessRequirementID>BR-006</BusinessRequirementID>
+      <Description>Distributed session management for stateless services</Description>
+      <Runtime>Python 3.11</Runtime>
+      <ComputePattern>AWS Lambda</ComputePattern>
+      <DataStore>
+        <Primary>
+          <Type>DynamoDB</Type>
+          <Name>sessions-table</Name>
+          <Rationale>Fast key-value access for session data with TTL</Rationale>
+          <Capacity>On-Demand</Capacity>
+          <TTL>Enabled</TTL>
+        </Primary>
+      </DataStore>
+      <APIs>
+        <Endpoint>
+          <Path>/sessions</Path>
+          <Method>POST</Method>
+          <Description>Create session</Description>
+        </Endpoint>
+        <Endpoint>
+          <Path>/sessions/{sessionId}</Path>
+          <Method>GET</Method>
+          <Description>Get session data</Description>
+        </Endpoint>
+        <Endpoint>
+          <Path>/sessions/{sessionId}</Path>
+          <Method>PUT</Method>
+          <Description>Update session</Description>
+        </Endpoint>
+        <Endpoint>
+          <Path>/sessions/{sessionId}</Path>
+          <Method>DELETE</Method>
+          <Description>Invalidate session</Description>
+        </Endpoint>
+      </APIs>
+      <Security>
+        <Encryption>
+          <AtRest>KMS encryption for session data</AtRest>
+          <InTransit>TLS 1.3</InTransit>
+        </Encryption>
+        <SessionTimeout>3600</SessionTimeout>
+      </Security>
+      <Observability>
+        <Logging>CloudWatch Logs</Logging>
+        <Metrics>Session creation/invalidation rates</Metrics>
+      </Observability>
+    </Service>
+
+    <Service>
+      <ServiceName>notification-service</ServiceName>
+      <BusinessRequirementID>BR-003</BusinessRequirementID>
+      <Description>Async notification delivery for order updates</Description>
+      <Runtime>Python 3.11</Runtime>
+      <ComputePattern>AWS Lambda triggered by EventBridge</ComputePattern>
+      <EventSubscriptions>
+        <Subscription>
+          <Source>order-events</Source>
+          <EventType>OrderStatusChanged</EventType>
+          <Handler>SendOrderNotification</Handler>
+        </Subscription>
+        <Subscription>
+          <Source>order-events</Source>
+          <EventType>OrderFulfilled</EventType>
+          <Handler>SendFulfillmentNotification</Handler>
+        </Subscription>
+      </EventSubscriptions>
+      <Integration>
+        <Service>Amazon SES</Service>
+        <Purpose>Email notifications</Purpose>
+      </Integration>
+      <Queues>
+        <Queue>
+          <Name>notification-queue</Name>
+          <Type>SQS Standard</Type>
+          <Purpose>Buffer notification requests</Purpose>
+          <DLQ>notification-dlq</DLQ>
+        </Queue>
+      </Queues>
+      <Security>
+        <IAM>Least privilege for SES and SQS access</IAM>
+      </Security>
+      <Observability>
+        <Logging>CloudWatch Logs</Logging>
+        <Metrics>Notification delivery success rate</Metrics>
+      </Observability>
+    </Service>
+
+    <Service>
+      <ServiceName>config-service</ServiceName>
+      <BusinessRequirementID>BR-011</BusinessRequirementID>
+      <Description>Centralized configuration management</Description>
+      <Implementation>AWS AppConfig</Implementation>
+      <Features>
+        <Feature>Dynamic configuration updates</Feature>
+        <Feature>Configuration validation</Feature>
+        <Feature>Gradual rollout</Feature>
+        <Feature>Automatic rollback on errors</Feature>
+      </Features>
+      <Storage>
+        <Type>S3</Type>
+        <Name>app-config-bucket</Name>
+        <Versioning>Enabled</Versioning>
+      </Storage>
+      <Security>
+        <Encryption>KMS encryption</Encryption>
+        <Access>IAM policies per service</Access>
+      </Security>
+    </Service>
+  </Services>
+
+  <APIGateway>
+    <Name>main-api-gateway</Name>
+    <Type>AWS API Gateway REST API</Type>
+    <BusinessRequirementID>BR-005</BusinessRequirementID>
+    <Features>
+      <Feature>Request/response transformation</Feature>
+      <Feature>API versioning</Feature>
+      <Feature>Request validation</Feature>
+      <Feature>CORS configuration</Feature>
+    </Features>
+    <Authentication>
+      <Type>JWT Authorizer</Type>
+      <TokenSource>Authorization header</TokenSource>
+      <Issuer>user-service</Issuer>
+    </Authentication>
+    <RateLimiting>
+      <DefaultQuota>10000 requests per day</DefaultQuota>
+      <DefaultThrottle>1000 requests per second</DefaultThrottle>
+      <BurstLimit>2000</BurstLimit>
+    </RateLimiting>
+    <Caching>
+      <Enabled>true</Enabled>
+      <TTL>300</TTL>
+      <CacheKeyParameters>
+        <Parameter>Authorization header</Parameter>
+        <Parameter>Query parameters</Parameter>
+      </CacheKeyParameters>
+    </Caching>
+    <Logging>
+      <AccessLogs>CloudWatch Logs</AccessLogs>
+      <ExecutionLogs>CloudWatch Logs</ExecutionLogs>
+      <Format>JSON</Format>
+    </Logging>
+    <Monitoring>
+      <Metrics>CloudWatch</Metrics>
+      <Alarms>
+        <Alarm>4XX error rate &gt; 5%</Alarm>
+        <Alarm>5XX error rate &gt; 1%</Alarm>
+        <Alarm>Latency p99 &gt; 1000ms</Alarm>
+      </Alarms>
+    </Monitoring>
+    <Security>
+      <TLS>1.3</TLS>
+      <WAF>AWS WAF with OWASP rules</WAF>
+      <InputValidation>Request validation models</InputValidation>
+    </Security>
+  </APIGateway>
+
+  <DataMigration>
+    <BusinessRequirementID>BR-004, BR-017</BusinessRequirementID>
+    <Strategy>
+      <Approach>Dual-write with eventual cutover</Approach>
+      <Steps>
+        <Step>
+          <Order>1</Order>
+          <Name>Schema Analysis</Name>
+          <Description>Analyze monolith database schema and dependencies</Description>
+        </Step>
+        <Step>
+          <Order>2</Order>
+          <Name>Data Decomposition</Name>
+          <Description>Decompose monolith data into service-specific schemas</Description>
+        </Step>
+        <Step>
+          <Order>3</Order>
+          <Name>Migration Scripts</Name>
+          <Description>Develop and test data migration scripts</Description>
+          <Tool>AWS Database Migration Service</Tool>
+        </Step>
+        <Step>
+          <Order>4</Order>
+          <Name>Initial Load</Name>
+          <Description>Perform initial data load to target databases</Description>
+        </Step>
+        <Step>
+          <Order>5</Order>
+          <Name>CDC Replication</Name>
+          <Description>Enable change data capture for continuous sync</Description>
+          <Tool>AWS DMS CDC</Tool>
+        </Step>
+        <Step>
+          <Order>6</Order>
+          <Name>Validation</Name>
+          <Description>Validate data integrity and completeness</Description>
+        </Step>
+        <Step>
+          <Order>7</Order>
+          <Name>Cutover</Name>
+          <Description>Switch to cloud databases and disable monolith writes</Description>
+        </Step>
+      </Steps>
+    </Strategy>
+    <TargetDatabases>
+      <Database>
+        <Service>user-service</Service>
+        <Type>DynamoDB</Type>
+        <Tables>
+          <Table>users</Table>
+          <Table>user_profiles</Table>
+          <Table>user_credentials</Table>
+        </Tables>
+      </Database>
+      <Database>
+        <Service>product-service</Service>
+        <Type>Aurora Serverless v2 PostgreSQL</Type>
+        <Tables>
+          <Table>products</Table>
+          <Table>categories</Table>
+          <Table>inventory</Table>
+          <Table>product_attributes</Table>
+        </Tables>
+      </Database>
+      <Database>
+        <Service>order-service</Service>
+        <Type>DynamoDB (write), Aurora Serverless v2 (read)</Type>
+        <Tables>
+          <Table>orders</Table>
+          <Table>order_items</Table>
+          <Table>order_history</Table>
+          <Table>payments</Table>
+        </Tables>
+      </Database>
+    </TargetDatabases>
+    <Validation>
+      <Method>Row count comparison</Method>
+      <Method>Checksum validation</Method>
+      <Method>Sample data verification</Method>
+      <Method>Referential integrity checks</Method>
+    </Validation>
+    <Rollback>
+      <Strategy>Maintain source database until validation complete</Strategy>
+      <Duration>30 days post-cutover</Duration>
+    </Rollback>
+  </DataMigration>
+
+  <EventDrivenArchitecture>
+    <EventBus>
+      <Name>product-events</Name>
+      <Type>EventBridge Custom Bus</Type>
+      <Events>
+        <Event>ProductCreated</Event>
+        <Event>ProductUpdated</Event>
+        <Event>InventoryChanged</Event>
+      </Events>
+      <Subscribers>
+        <Subscriber>order-service</Subscriber>
+        <Subscriber>notification-service</Subscriber>
+      </Subscribers>
+    </EventBus>
+    <EventBus>
+      <Name>order-events</Name>
+      <Type>EventBridge Custom Bus</Type>
+      <Events>
+        <Event>OrderCreated</Event>
+        <Event>OrderStatusChanged</Event>
+        <Event>PaymentProcessed</Event>
+        <Event>OrderFulfilled</Event>
+      </Events>
+      <Subscribers>
+        <Subscriber>notification-service</Subscriber>
+        <Subscriber>analytics-service</Subscriber>
+      </Subscribers>
+      <Archive>
+        <Enabled>true</Enabled>
+        <Destination>S3</Destination>
+        <Retention>7 years</Retention>
+      </Archive>
+    </EventBus>
+    <DeadLetterQueues>
+      <DLQ>
+        <Name>order-processing-dlq</Name>
+        <Type>SQS</Type>
+        <Retention>14 days</Retention>
+        <Alarm>Message count &gt; 10</Alarm>
+      </DLQ>
+      <DLQ>
+        <Name>payment-processing-dlq</Name>
+        <Type>SQS</Type>
+        <Retention>14 days</Retention>
+        <Alarm>Message count &gt; 5</Alarm>
+      </DLQ>
+      <DLQ>
+        <Name>notification-dlq</Name>
+        <Type>SQS</Type>
+        <Retention>7 days</Retention>
+        <Alarm>Message count &gt; 50</Alarm>
+      </DLQ>
+    </DeadLetterQueues>
+  </EventDrivenArchitecture>
+
+  <Security>
+    <BusinessRequirementID>BR-008</BusinessRequirementID>
+    <IdentityAndAccess>
+      <IAM>
+        <Principle>Least privilege access</Principle>
+        <ServiceRoles>Dedicated IAM roles per Lambda function</ServiceRoles>
+        <CrossServiceAccess>IAM policies with resource-level permissions</CrossServiceAccess>
+      </IAM>
+      <Authentication>
+        <Mechanism>JWT tokens</Mechanism>
+        <TokenExpiry>3600 seconds</TokenExpiry>
+        <RefreshTokens>Supported</RefreshTokens>
+      </Authentication>
+      <Authorization>
+        <Model>Role-based access control (RBAC)</Model>
+        <Enforcement>API Gateway authorizer + service-level checks</Enforcement>
+      </Authorization>
+    </IdentityAndAccess>
+    <DataProtection>
+      <Encryption>
+        <AtRest>
+          <Method>AWS KMS</Method>
+          <Keys>Customer-managed keys per service</Keys>
+          <Rotation>Automatic annual rotation</Rotation>
+        </AtRest>
+        <InTransit>
+          <Protocol>TLS 1.3</Protocol>
+          <CertificateManagement>AWS Certificate Manager</CertificateManagement>
+        </InTransit>
+      </Encryption>
+      <SecretsManagement>
+        <Service>AWS Secrets Manager</Service>
+        <Rotation>Automatic 90-day rotation</Rotation>
+        <Secrets>
+          <Secret>Database credentials</Secret>
+          <Secret>API keys</Secret>
+          <Secret>JWT signing keys</Secret>
+          <Secret>Payment gateway credentials</Secret>
+        </Secrets>
+      </SecretsManagement>
+      <DataClassification>
+        <PII>User profiles, contact information</PII>

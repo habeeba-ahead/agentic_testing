@@ -1,0 +1,35 @@
+{
+  "system": "<system name or identifier>",
+  "summary": "<3–6 lines summarizing modernization posture inferred from the BRD only>",
+  "domains": [
+    {
+      "name": "<Application|Data|Integration|Infrastructure|Security & Compliance|Operations/Platform|FinOps|MLOps|Governance|UX|Org/Process>",
+      "scope": "<what modernizes and why, tied to BRD language>",
+      "drivers": ["<driver 1 from BRD>", "<driver 2 from BRD>"],
+      "proposed_workstreams": [
+        {
+          "title": "<concise workstream>",
+          "deliverables": ["<deliverable 1>", "<deliverable 2>"],
+          "success_metrics": ["<metric 1>", "<metric 2>"]
+        }
+      ],
+      "dependencies": ["<other domain names or empty>"],
+      "priority": "<High|Medium|Low>",
+      "confidence": 0.0,
+      "risks": ["<risk 1>", "<risk 2>"],
+      "evidence": [
+        { "locator": "<BRD section/page>", "excerpt": "<≤25 words verbatim from BRD>" }
+      ]
+    }
+  ],
+  "cross_domain_view": {
+    "critical_path": ["<ordered domains on path>"],
+    "notable_gaps": ["<missing artifacts/decisions found in BRD>"],
+    "guardrail_conflicts": ["<where BRD intent conflicts with guardrails/policies>"]
+  },
+  "recommendations": [
+    { "horizon": "now", "action": "<immediate step>", "owner": "<team/role>" },
+    { "horizon": "next", "action": "<near-term step>", "owner": "<team/role>" },
+    { "horizon": "later", "action": "<follow-on step>", "owner": "<team/role>" }
+  ]
+}

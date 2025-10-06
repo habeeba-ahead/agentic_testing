@@ -1,0 +1,566 @@
+xml
+<ArchitectureSpec>
+  <Metadata>
+    <ProjectName>Monolith Training Application Cloud Migration</ProjectName>
+    <TargetState>Cloud-Native Microservices on AWS Serverless</TargetState>
+    <MigrationPhase>Monolith to Microservices</MigrationPhase>
+    <LastUpdated>2024-01-01</LastUpdated>
+  </Metadata>
+
+  <SystemOverview>
+    <Description>
+      Migration of monolithic Java training application to serverless microservices architecture on AWS.
+      System manages training courses, user enrollments, and administrative functions with role-based access control.
+      Target architecture uses API Gateway for unified interface, Lambda for compute, DynamoDB for high-write operations,
+      Aurora Serverless v2 for relational data, and EventBridge for event-driven communication between services.
+    </Description>
+    <KeyDrivers>
+      <Driver id="DR-001">Independent scalability for course management and enrollment services during peak periods</Driver>
+      <Driver id="DR-002">Reduced operational overhead through managed serverless services</Driver>
+      <Driver id="DR-003">Improved deployment velocity with microservices and CI/CD automation</Driver>
+      <Driver id="DR-004">Cost optimization through serverless pay-per-use model</Driver>
+      <Driver id="DR-005">Enhanced observability and troubleshooting in distributed system</Driver>
+    </KeyDrivers>
+  </SystemOverview>
+
+  <Decisions>
+    <Decision id="DEC-001">
+      <Title>Serverless-First Architecture</Title>
+      <Description>
+        Use AWS Lambda for all compute workloads with API Gateway for REST endpoints.
+        Eliminates server management, provides automatic scaling, and optimizes costs for variable workloads.
+      </Description>
+      <Rationale>
+        Training application has variable load patterns with peak enrollment periods.
+        Serverless provides automatic scaling without capacity planning and zero idle costs.
+        Aligns with guardrail for serverless-first infrastructure baseline.
+      </Rationale>
+      <Alternatives>
+        <Alternative rejected="true">ECS Fargate - Higher operational complexity and baseline costs</Alternative>
+        <Alternative rejected="true">EC2 with Auto Scaling - Requires server management and higher idle costs</Alternative>
+      </Alternatives>
+      <Implications>
+        <Implication>Cold start latency must be managed for user-facing APIs (target &lt;500ms)</Implication>
+        <Implication>Lambda execution time limits (15 min) require async patterns for long operations</Implication>
+        <Implication>Stateless design required; session state externalized to DynamoDB</Implication>
+      </Implications>
+    </Decision>
+
+    <Decision id="DEC-002">
+      <Title>Polyglot Persistence Strategy</Title>
+      <Description>
+        DynamoDB for session management and high-write enrollment operations.
+        Aurora Serverless v2 PostgreSQL for relational course and user data requiring ACID transactions.
+        S3 for audit logs and event archives.
+      </Description>
+      <Rationale>
+        DynamoDB provides single-digit millisecond latency for session lookups and handles enrollment spikes.
+        Aurora Serverless v2 maintains relational integrity for course-user relationships while auto-scaling.
+        Optimizes cost and performance by matching data patterns to appropriate storage.
+      </Rationale>
+      <Alternatives>
+        <Alternative rejected="true">Aurora only - Higher costs for high-write session data</Alternative>
+        <Alternative rejected="true">DynamoDB only - Complex modeling for relational course data</Alternative>
+      </Alternatives>
+      <Implications>
+        <Implication>Data consistency patterns differ between services (eventual vs immediate)</Implication>
+        <Implication>Cross-database transactions require saga pattern implementation</Implication>
+        <Implication>Migration requires data model transformation and validation</Implication>
+      </Implications>
+    </Decision>
+
+    <Decision id="DEC-003">
+      <Title>Event-Driven Architecture with EventBridge</Title>
+      <Description>
+        EventBridge as central event bus for asynchronous service communication.
+        SQS for reliable work queue processing (enrollment confirmations, notifications).
+        Synchronous REST for read operations and immediate consistency requirements.
+      </Description>
+      <Rationale>
+        Decouples services for independent deployment and scaling.
+        EventBridge provides schema registry and event replay capabilities.
+        SQS ensures reliable processing of critical enrollment operations.
+      </Rationale>
+      <Alternatives>
+        <Alternative rejected="true">SNS/SQS only - Less sophisticated routing and no schema management</Alternative>
+        <Alternative rejected="true">Synchronous REST only - Tight coupling and cascading failures</Alternative>
+      </Alternatives>
+      <Implications>
+        <Implication>Eventual consistency model requires UI feedback patterns</Implication>
+        <Implication>Event versioning strategy needed for backward compatibility</Implication>
+        <Implication>Distributed tracing essential for debugging event flows</Implication>
+      </Implications>
+    </Decision>
+
+    <Decision id="DEC-004">
+      <Title>API Gateway with Lambda Authorizer</Title>
+      <Description>
+        API Gateway REST API as single entry point maintaining backward compatibility.
+        Lambda authorizer for JWT token validation and role-based access control.
+        Request/response transformation for legacy client compatibility.
+      </Description>
+      <Rationale>
+        Provides unified interface matching monolith endpoints (GR-002 backward compatibility).
+        Centralizes authentication, rate limiting, and request routing.
+        Lambda authorizer enables custom authorization logic for ADMIN/USER roles.
+      </Rationale>
+      <Alternatives>
+        <Alternative rejected="true">Application Load Balancer - Less API management features</Alternative>
+        <Alternative rejected="true">Cognito User Pools - Requires client changes for existing auth</Alternative>
+      </Alternatives>
+      <Implications>
+        <Implication>API Gateway latency budget of 50ms requires optimization</Implication>
+        <Implication>Authorizer caching strategy needed for performance</Implication>
+        <Implication>API versioning strategy for future breaking changes</Implication>
+      </Implications>
+    </Decision>
+
+    <Decision id="DEC-005">
+      <Title>Python 3.11 Runtime for Lambda Functions</Title>
+      <Description>
+        Migrate from Java monolith to Python 3.11 for Lambda functions.
+        Use AWS Lambda Powertools for Python for structured logging, tracing, and metrics.
+        Shared libraries for common utilities (validation, error handling, auth).
+      </Description>
+      <Rationale>
+        Python 3.11 provides faster cold starts than Java for Lambda.
+        Rich ecosystem for AWS integrations and data processing.
+        Aligns with guardrail requirement for Python 3.11 runtime.
+      </Rationale>
+      <Alternatives>
+        <Alternative rejected="true">Java - Slower cold starts and higher memory requirements</Alternative>
+        <Alternative rejected="true">Node.js - Team expertise in Python</Alternative>
+      </Alternatives>
+      <Implications>
+        <Implication>Team training required for Python best practices</Implication>
+        <Implication>Business logic migration from Java to Python</Implication>
+        <Implication>Type hints and validation libraries for type safety</Implication>
+      </Implications>
+    </Decision>
+
+    <Decision id="DEC-006">
+      <Title>Terraform for Infrastructure as Code</Title>
+      <Description>
+        Terraform for all infrastructure provisioning and management.
+        Modular structure with separate state files per service.
+        GitOps workflow with automated plan/apply in CI/CD pipeline.
+      </Description>
+      <Rationale>
+        Aligns with guardrail requirement for Terraform IaC.
+        Enables version control, peer review, and automated deployment.
+        Supports multi-environment deployments (dev, staging, prod).
+      </Rationale>
+      <Alternatives>
+        <Alternative rejected="true">CloudFormation - Vendor lock-in (GR-012)</Alternative>
+        <Alternative rejected="true">CDK - Additional abstraction layer complexity</Alternative>
+      </Alternatives>
+      <Implications>
+        <Implication>State management strategy with S3 backend and DynamoDB locking</Implication>
+        <Implication>Module versioning for shared infrastructure components</Implication>
+        <Implication>Drift detection and remediation processes</Implication>
+      </Implications>
+    </Decision>
+
+    <Decision id="DEC-007">
+      <Title>CloudWatch with OpenTelemetry for Observability</Title>
+      <Description>
+        CloudWatch Logs for centralized log aggregation with structured JSON format.
+        X-Ray with OpenTelemetry SDK for distributed tracing across services.
+        CloudWatch Metrics and custom metrics for business KPIs.
+        Correlation IDs propagated through all service calls.
+      </Description>
+      <Rationale>
+        Aligns with guardrail for CloudWatch + OTEL observability.
+        Structured logs enable efficient querying and analysis.
+        X-Ray provides service map and latency analysis for distributed system.
+      </Rationale>
+      <Alternatives>
+        <Alternative rejected="true">Third-party APM - Additional cost and data egress</Alternative>
+        <Alternative rejected="true">CloudWatch only - Limited distributed tracing</Alternative>
+      </Alternatives>
+      <Implications>
+        <Implication>Log retention policy (90 days) with S3 archival for compliance</Implication>
+        <Implication>Sampling strategy for traces to manage costs</Implication>
+        <Implication>Dashboard and alarm templates for each service</Implication>
+      </Implications>
+    </Decision>
+
+    <Decision id="DEC-008">
+      <Title>Secrets Manager and KMS for Security</Title>
+      <Description>
+        AWS Secrets Manager for database credentials and API keys with automatic rotation.
+        KMS for encryption at rest (DynamoDB, Aurora, S3) and in transit.
+        IAM roles for service-to-service authentication with least privilege.
+        VPC endpoints for private AWS service access.
+      </Description>
+      <Rationale>
+        Meets security guardrail (GR-004) for encryption and authentication.
+        Eliminates hardcoded credentials and enables automated rotation.
+        IAM roles provide fine-grained access control without credential management.
+      </Rationale>
+      <Alternatives>
+        <Alternative rejected="true">Parameter Store - Less sophisticated secret rotation</Alternative>
+        <Alternative rejected="true">Environment variables - Security risk for sensitive data</Alternative>
+      </Alternatives>
+      <Implications>
+        <Implication>Secret rotation testing required for zero-downtime updates</Implication>
+        <Implication>KMS key management and rotation policies</Implication>
+        <Implication>VPC configuration for Lambda functions accessing private resources</Implication>
+      </Implications>
+    </Decision>
+
+    <Decision id="DEC-009">
+      <Title>Multi-Stage Deployment Pipeline</Title>
+      <Description>
+        GitHub Actions for CI/CD with automated testing and deployment.
+        Environments: dev (auto-deploy), staging (auto-deploy with approval), prod (manual approval).
+        Blue-green deployment strategy with automated rollback on CloudWatch alarms.
+        Canary deployments for high-risk changes using Lambda aliases and weighted routing.
+      </Description>
+      <Rationale>
+        Supports deployment frequency target (SM-004) of 4+ deployments per month.
+        Automated testing ensures quality (GR-010) with 80% code coverage.
+        Rollback capability meets guardrail (GR-011) for 15-minute recovery.
+      </Rationale>
+      <Alternatives>
+        <Alternative rejected="true">Manual deployments - Slow and error-prone</Alternative>
+        <Alternative rejected="true">Single-stage pipeline - Higher production risk</Alternative>
+      </Alternatives>
+      <Implications>
+        <Implication>Comprehensive test suite required (unit, integration, e2e)</Implication>
+        <Implication>Deployment runbooks and rollback procedures documented</Implication>
+        <Implication>Approval workflows integrated with change management (GR-008)</Implication>
+      </Implications>
+    </Decision>
+
+    <Decision id="DEC-010">
+      <Title>Strangler Fig Migration Pattern</Title>
+      <Description>
+        Incremental migration using strangler fig pattern with API Gateway routing.
+        Phase 1: Authentication and session management
+        Phase 2: Course management service
+        Phase 3: Enrollment service
+        Phase 4: Decommission monolith
+        Parallel run period with traffic shadowing for validation.
+      </Description>
+      <Rationale>
+        Minimizes risk by migrating incrementally with rollback capability.
+        Maintains availability during migration (GR-006) with 99.5% uptime.
+        Enables validation of each service before full cutover.
+      </Rationale>
+      <Alternatives>
+        <Alternative rejected="true">Big bang migration - High risk of extended outage</Alternative>
+        <Alternative rejected="true">Lift and shift - Misses modernization benefits</Alternative>
+      </Alternatives>
+      <Implications>
+        <Implication>Dual-write strategy required during transition period</Implication>
+        <Implication>Data synchronization and reconciliation processes</Implication>
+        <Implication>Extended migration timeline (12 months) with careful coordination</Implication>
+      </Implications>
+    </Decision>
+  </Decisions>
+
+  <Patterns>
+    <Pattern id="PAT-001">
+      <Name>API Gateway Facade</Name>
+      <Category>Integration</Category>
+      <Description>
+        API Gateway provides unified REST interface maintaining backward compatibility with monolith endpoints.
+        Routes requests to appropriate Lambda functions based on path and method.
+        Implements request/response transformation for legacy client compatibility.
+      </Description>
+      <Applicability>
+        All external API access and client-facing endpoints.
+        Centralizes cross-cutting concerns (auth, rate limiting, CORS).
+      </Applicability>
+      <Implementation>
+        <Component>API Gateway REST API with resource hierarchy matching monolith</Component>
+        <Component>Lambda authorizer for JWT validation and RBAC</Component>
+        <Component>VTL templates for request/response transformation</Component>
+        <Component>Usage plans and API keys for rate limiting</Component>
+      </Implementation>
+      <Consequences>
+        <Benefit>Single entry point simplifies client configuration</Benefit>
+        <Benefit>Centralized authentication and authorization</Benefit>
+        <Tradeoff>Additional latency (target &lt;50ms) in request path</Tradeoff>
+        <Tradeoff>API Gateway limits (10,000 RPS default) require quota increases</Tradeoff>
+      </Consequences>
+    </Pattern>
+
+    <Pattern id="PAT-002">
+      <Name>Event-Driven Choreography</Name>
+      <Category>Communication</Category>
+      <Description>
+        Services publish domain events to EventBridge when state changes occur.
+        Interested services subscribe to events and react independently.
+        No direct service-to-service calls for asynchronous operations.
+        Example: EnrollmentCreated event triggers notification service and analytics service.
+      </Description>
+      <Applicability>
+        Asynchronous operations where immediate consistency not required.
+        Cross-service workflows (enrollment confirmation, notifications).
+        Audit logging and analytics data collection.
+      </Applicability>
+      <Implementation>
+        <Component>EventBridge custom event bus for domain events</Component>
+        <Component>Event schemas in EventBridge schema registry</Component>
+        <Component>Lambda functions as event targets with DLQ for failures</Component>
+        <Component>SQS queues for reliable processing of critical events</Component>
+      </Implementation>
+      <Consequences>
+        <Benefit>Loose coupling enables independent service deployment</Benefit>
+        <Benefit>Easy to add new consumers without modifying publishers</Benefit>
+        <Tradeoff>Eventual consistency requires UI feedback patterns</Tradeoff>
+        <Tradeoff>Debugging distributed flows requires correlation IDs and tracing</Tradeoff>
+      </Consequences>
+    </Pattern>
+
+    <Pattern id="PAT-003">
+      <Name>Saga Pattern for Distributed Transactions</Name>
+      <Category>Data Management</Category>
+      <Description>
+        Enrollment workflow spans multiple services (course capacity check, user validation, enrollment creation).
+        Choreography-based saga using EventBridge events with compensating transactions.
+        Each service publishes success/failure events; failures trigger compensation.
+        Example: EnrollmentFailed event triggers capacity release in course service.
+      </Description>
+      <Applicability>
+        Multi-service workflows requiring data consistency.
+        Enrollment process spanning course and enrollment services.
+        Operations that cannot use distributed transactions across DynamoDB and Aurora.
+      </Applicability>
+      <Implementation>
+        <Component>State machine tracked in DynamoDB with TTL for cleanup</Component>
+        <Component>Compensating transaction handlers in each service</Component>
+        <Component>Idempotency keys to handle duplicate events</Component>
+        <Component>Dead letter queues for failed compensation attempts</Component>
+      </Implementation>
+      <Consequences>
+        <Benefit>Maintains data consistency without distributed transactions</Benefit>
+        <Benefit>Services remain independent and loosely coupled</Benefit>
+        <Tradeoff>Complex error handling and compensation logic</Tradeoff>
+        <Tradeoff>Eventual consistency visible to users during workflow</Tradeoff>
+      </Consequences>
+    </Pattern>
+
+    <Pattern id="PAT-004">
+      <Name>Lambda Layers for Shared Code</Name>
+      <Category>Code Organization</Category>
+      <Description>
+        Common utilities packaged as Lambda layers shared across functions.
+        Layers include: authentication helpers, validation framework, error handling, logging utilities.
+        Versioned layers enable independent updates without redeploying all functions.
+      </Description>
+      <Applicability>
+        Cross-cutting concerns used by multiple Lambda functions.
+        Third-party dependencies (AWS SDK, validation libraries).
+        Custom business logic shared across services.
+      </Applicability>
+      <Implementation>
+        <Component>Separate layer for each concern (auth, validation, observability)</Component>
+        <Component>Semantic versioning for layer releases</Component>
+        <Component>Automated layer build and publish in CI/CD</Component>
+        <Component>Layer size optimization to minimize cold start impact</Component>
+      </Implementation>
+      <Consequences>
+        <Benefit>Reduces code duplication across Lambda functions</Benefit>
+        <Benefit>Centralized updates for shared functionality</Benefit>
+        <Tradeoff>Layer size contributes to deployment package and cold start time</Tradeoff>
+        <Tradeoff>Version management complexity across multiple functions</Tradeoff>
+      </Consequences>
+    </Pattern>
+
+    <Pattern id="PAT-005">
+      <Name>Cache-Aside with DynamoDB</Name>
+      <Category>Performance</Category>
+      <Description>
+        Frequently accessed course data cached in DynamoDB with TTL.
+        Lambda functions check cache before querying Aurora.
+        Cache invalidation on course updates via EventBridge events.
+        Target 80% cache hit ratio for course lookups.
+      </Description>
+      <Applicability>
+        Read-heavy operations with acceptable eventual consistency.
+        Course catalog browsing and search.
+        User profile data for authentication context.
+      </Applicability>
+      <Implementation>
+        <Component>DynamoDB table with TTL attribute for automatic expiration</Component>
+        <Component>Cache key strategy using composite keys (courseId, version)</Component>
+        <Component>EventBridge rule for CourseUpdated events triggering cache invalidation</Component>
+        <Component>CloudWatch metrics for cache hit/miss ratio monitoring</Component>
+      </Implementation>
+      <Consequences>
+        <Benefit>Reduces Aurora query load and improves response times</Benefit>
+        <Benefit>DynamoDB provides consistent single-digit millisecond latency</Benefit>
+        <Tradeoff>Cache invalidation complexity for related data</Tradeoff>
+        <Tradeoff>Eventual consistency between cache and source of truth</Tradeoff>
+      </Consequences>
+    </Pattern>
+
+    <Pattern id="PAT-006">
+      <Name>Circuit Breaker for Service Resilience</Name>
+      <Category>Reliability</Category>
+      <Description>
+        Lambda functions implement circuit breaker for calls to Aurora and external services.
+        Circuit opens after threshold failures, preventing cascading failures.
+        Exponential backoff with jitter for retry attempts.
+        Fallback responses for non-critical operations when circuit open.
+      </Description>
+      <Applicability>
+        Synchronous calls to databases and downstream services.
+        Operations with acceptable degraded functionality.
+        Protection against cascading failures during outages.
+      </Applicability>
+      <Implementation>
+        <Component>Circuit breaker library in shared Lambda layer</Component>
+        <Component>Configuration per dependency (Aurora, external APIs)</Component>
+        <Component>CloudWatch metrics for circuit state transitions</Component>
+        <Component>Alarms for sustained open circuit conditions</Component>
+      </Implementation>
+      <Consequences>
+        <Benefit>Prevents resource exhaustion during downstream failures</Benefit>
+        <Benefit>Faster failure detection and recovery</Benefit>
+        <Tradeoff>Additional complexity in error handling logic</Tradeoff>
+        <Tradeoff>Tuning required for threshold and timeout values</Tradeoff>
+      </Consequences>
+    </Pattern>
+
+    <Pattern id="PAT-007">
+      <Name>Correlation ID Propagation</Name>
+      <Category>Observability</Category>
+      <Description>
+        Unique correlation ID generated at API Gateway and propagated through all service calls.
+        Included in all log entries, events, and traces for request tracking.
+        Enables end-to-end request tracing across Lambda functions, EventBridge, and SQS.
+      </Description>
+      <Applicability>
+        All service-to-service communication (synchronous and asynchronous).
+        Debugging and troubleshooting distributed workflows.
+        Performance analysis and bottleneck identification.
+      </Applicability>
+      <Implementation>
+        <Component>API Gateway generates X-Correlation-ID header if not present</Component>
+        <Component>Lambda Powertools automatic correlation ID extraction and logging</Component>
+        <Component>EventBridge events include correlation ID in metadata</Component>
+        <Component>X-Ray trace ID linked to correlation ID for unified view</Component>
+      </Implementation>
+      <Consequences>
+        <Benefit>Simplified debugging of distributed request flows</Benefit>
+        <Benefit>End-to-end latency analysis across services</Benefit>
+        <Tradeoff>Requires discipline to propagate ID through all calls</Tradeoff>
+        <Tradeoff>Additional metadata in logs and events</Tradeoff>
+      </Consequences>
+    </Pattern>
+
+    <Pattern id="PAT-008">
+      <Name>Idempotent Event Processing</Name>
+      <Category>Reliability</Category>
+      <Description>
+        All event handlers implement idempotency using DynamoDB for deduplication.
+        Event ID stored with processing timestamp; duplicate events skipped.
+        Ensures exactly-once semantics for critical operations (enrollments, payments).
+      </Description>
+      <Applicability>
+        EventBridge and SQS message processing.
+        Operations with side effects (database writes, external API calls).
+        Retry scenarios where duplicate processing would cause errors.
+      </Applicability>
+      <Implementation>
+        <Component>DynamoDB table for processed event IDs with TTL</Component>
+        <Component>Conditional write to ensure atomic check-and-process</Component>
+        <Component>Event ID generation strategy (UUID or composite key)</Component>
+        <Component>TTL set to event retention period (7 days)</Component>
+      </Implementation>
+      <Consequences>
+        <Benefit>Safe retry of failed event processing</Benefit>
+        <Benefit>Prevents duplicate enrollments and data corruption</Benefit>
+        <Tradeoff>Additional DynamoDB read/write for each event</Tradeoff>
+        <Tradeoff>Storage costs for deduplication table</Tradeoff>
+      </Consequences>
+    </Pattern>
+
+    <Pattern id="PAT-009">
+      <Name>Database per Service</Name>
+      <Category>Data Management</Category>
+      <Description>
+        Each microservice owns its data store with no direct database access from other services.
+        Course service owns course data in Aurora; enrollment service owns enrollment data in DynamoDB.
+        Data access only through service APIs or events.
+      </Description>
+      <Applicability>
+        Service boundaries aligned with bounded contexts.
+        Data with different access patterns and consistency requirements.
+        Services requiring independent scaling and deployment.
+      </Applicability>
+      <Implementation>
+        <Component>Aurora Serverless v2 cluster for course service (relational data)</Component>
+        <Component>DynamoDB table for enrollment service (high-write, key-value)</Component>
+        <Component>DynamoDB table for session service (low-latency lookups)</Component>
+        <Component>IAM policies enforce service-specific database access</Component>
+      </Implementation>
+      <Consequences>
+        <Benefit>Services can evolve data models independently</Benefit>
+        <Benefit>Optimized storage choice per service requirements</Benefit>
+        <Tradeoff>No joins across service boundaries; requires data duplication</Tradeoff>
+        <Tradeoff>Distributed queries require aggregation at application layer</Tradeoff>
+      </Consequences>
+    </Pattern>
+
+    <Pattern id="PAT-010">
+      <Name>Structured Logging with Context</Name>
+      <Category>Observability</Category>
+      <Description>
+        All logs written in structured JSON format with consistent schema.
+        Contextual information included: correlation ID, user ID, service name, environment.
+        Log levels used appropriately (ERROR for failures, WARN for degraded, INFO for business events).
+        Lambda Powertools logger provides automatic context injection.
+      </Description>
+      <Applicability>
+        All Lambda functions and application code.
+        Debugging, monitoring, and compliance audit trails.
+        CloudWatch Insights queries and dashboards.
+      </Applicability>
+      <Implementation>
+        <Component>Lambda Powertools Logger with JSON formatter</Component>
+        <Component>Standard log schema with required fields</Component>
+        <Component>CloudWatch Log Groups per Lambda function</Component>
+        <Component>Log retention policy (90 days) with S3 archival</Component>
+      </Implementation>
+      <Consequences>
+        <Benefit>Efficient log querying and analysis in CloudWatch Insights</Benefit>
+        <Benefit>Consistent log format across all services</Benefit>
+        <Tradeoff>Larger log volume compared to plain text</Tradeoff>
+        <Tradeoff>Requires log parsing for human readability</Tradeoff>
+      </Consequences>
+    </Pattern>
+  </Patterns>
+
+  <Services>
+    <Service id="SVC-001">
+      <Name>Authentication Service</Name>
+      <Description>
+        Handles user authentication, JWT token generation and validation, and session management.
+        Implements role-based access control (ADMIN, USER) matching monolith behavior.
+        Stores session data in DynamoDB for stateless Lambda execution.
+      </Description>
+      <Responsibilities>
+        <Responsibility>User login with username/password validation</Responsibility>
+        <Responsibility>JWT token generation with role claims</Responsibility>
+        <Responsibility>Token validation and refresh</Responsibility>
+        <Responsibility>Session creation and management in DynamoDB</Responsibility>
+        <Responsibility>Password policy enforcement and encryption</Responsibility>
+      </Responsibilities>
+      <APIs>
+        <API>POST /api/auth/login - User authentication</API>
+        <API>POST /api/auth/logout - Session termination</API>
+        <API>POST /api/auth/refresh - Token refresh</API>
+        <API>GET /api/auth/validate - Token validation (internal)</API>
+      </APIs>
+      <DataStores>
+        <DataStore>DynamoDB table: user-sessions (partition key: sessionId, TTL: 24h)</DataStore>
+        <DataStore>Aurora table: users (id, username, password_hash, role, created_at)</DataStore>
+      </DataStores>
+      <Dependencies>
+        <Dependency>Secrets Manager for JWT signing key</Dependency>
+        <Dependency>KMS for password encryption

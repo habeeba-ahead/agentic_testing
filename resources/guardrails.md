@@ -7,4 +7,3 @@ APIs: API Gateway (REST)
 Security: IAM, Secrets Manager, KMS
 Observability: CloudWatch + OTEL; structured logs + traces
 Cost: managed serverless, cap idle costs
-IaC: Terraform

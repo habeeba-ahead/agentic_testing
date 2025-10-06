@@ -1,0 +1,160 @@
+```json
+{
+  "bundle_manifest": [
+    {
+      "path": "infra/terraform/backend.tf",
+      "purpose": "Terraform backend configuration (empty block; configured via CI -backend-config)",
+      "note": "Backend values injected at runtime to avoid hardcoding"
+    },
+    {
+      "path": "infra/terraform/providers.tf",
+      "purpose": "AWS provider and required Terraform version",
+      "note": "Includes project/env/region variables"
+    },
+    {
+      "path": "infra/terraform/main.tf",
+      "purpose": "Core infrastructure overlay: DynamoDB tables, EventBridge bus, S3 bucket, Lambda functions, HTTP API, event rules",
+      "note": "Single overlay wiring all services together"
+    },
+    {
+      "path": "infra/terraform/iam.tf",
+      "purpose": "IAM roles and policies for Lambda functions with least-privilege resource scoping",
+      "note": "Scoped to specific tables, buckets, and event buses"
+    },
+    {
+      "path": "infra/terraform/alarms.tf",
+      "purpose": "CloudWatch alarms for Lambda errors, throttles, and API 5xx responses",
+      "note": "Baseline observability per guardrails"
+    },
+    {
+      "path": "infra/terraform/outputs.tf",
+      "purpose": "Terraform outputs for API endpoint, table names, bus name, bucket name",
+      "note": "Facilitates cross-stack references and debugging"
+    },
+    {
+      "path": "src/orders/handlers.py",
+      "purpose": "Orders service handlers: create_order, get_order",
+      "note": "Already provided; no changes needed"
+    },
+    {
+      "path": "src/receipts/worker.py",
+      "purpose": "Receipts worker handler reacting to ReceiptGenerated events",
+      "note": "Already provided; no changes needed"
+    },
+    {
+      "path": "src/ingestor/process_csv.py",
+      "purpose": "CRM CSV ingestor handler triggered by S3 object creation",
+      "note": "Already provided; no changes needed"
+    },
+    {
+      "path": "src/inventory/handlers.py",
+      "purpose": "Inventory reservation handler with idempotency and concurrency control",
+      "note": "Already provided; no changes needed"
+    },
+    {
+      "path": "src/ops/health.py",
+      "purpose": "Health check endpoint handler",
+      "note": "Already provided; no changes needed"
+    },
+    {
+      "path": "tests/test_orders.py",
+      "purpose": "Unit tests for orders handlers",
+      "note": "Smoke tests for create_order and get_order"
+    },
+    {
+      "path": "tests/test_inventory.py",
+      "purpose": "Unit tests for inventory reserve handler",
+      "note": "Tests idempotency and concurrency logic"
+    },
+    {
+      "path": "tests/test_ingestor.py",
+      "purpose": "Unit tests for CSV ingestor",
+      "note": "Tests CSV parsing and event emission"
+    },
+    {
+      "path": "tests/test_receipts.py",
+      "purpose": "Unit tests for receipts worker",
+      "note": "Smoke test for event handling"
+    },
+    {
+      "path": "tests/test_health.py",
+      "purpose": "Unit tests for health check",
+      "note": "Validates response structure"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "purpose": "GitHub Actions CI/CD pipeline with OIDC, lint, test, package, Terraform plan/apply",
+      "note": "Auto-apply to staging on main branch; plan-only on PRs"
+    },
+    {
+      "path": "requirements.txt",
+      "purpose": "Python dependencies for Lambda functions",
+      "note": "boto3 and other runtime dependencies"
+    },
+    {
+      "path": "requirements-dev.txt",
+      "purpose": "Development dependencies for testing and linting",
+      "note": "pytest, moto, flake8, black"
+    },
+    {
+      "path": ".flake8",
+      "purpose": "Flake8 linter configuration",
+      "note": "Python code quality checks"
+    },
+    {
+      "path": "pytest.ini",
+      "purpose": "Pytest configuration",
+      "note": "Test discovery and execution settings"
+    },
+    {
+      "path": "scripts/package.sh",
+      "purpose": "Script to package Lambda functions into deployment artifacts",
+      "note": "Creates ZIP files for each function"
+    },
+    {
+      "path": "readme.md",
+      "purpose": "Project documentation and deployment instructions"
+    },
+    {
+      "path": "changelog.md",
+      "purpose": "Change log documenting initial stitch and design decisions"
+    }
+  ],
+  "src": {
+    "files": [
+      {
+        "path": "src/orders/handlers.py",
+        "content": "# src/orders/handlers.py\nimport os, json, time, uuid, boto3\ndynamodb = boto3.resource(\"dynamodb\")\nevents   = boto3.client(\"events\")\n\nTABLE_NAME = os.getenv(\"ORDERS_TABLE\", \"\")\nBUS_NAME   = os.getenv(\"EVENT_BUS_NAME\", \"\")\n\ndef create_order(event, context):\n    body = json.loads(event.get(\"body\") or \"{}\")\n    if \"total\" not in body:\n        return {\"statusCode\":400,\"body\":json.dumps({\"error\":\"total required\"})}\n    order_id = str(uuid.uuid4())\n    item = {\n        \"order_id\": order_id,\n        \"status\": \"CREATED\",\n        \"total\": float(body.get(\"total\", 0.0)),\n        \"created_at\": time.strftime(\"%Y-%m-%dT%H:%M:%SZ\"),\n    }\n    dynamodb.Table(TABLE_NAME).put_item(Item=item)\n    if BUS_NAME:\n        events.put_events(Entries=[{\n            \"Source\":\"app.orders\",\n            \"DetailType\":\"ReceiptGenerated\",\n            \"Detail\":json.dumps({\"order_id\":order_id,\"total\":item[\"total\"]}),\n            \"EventBusName\": BUS_NAME\n        }])\n    return {\"statusCode\":201,\"body\":json.dumps({\"order_id\":order_id})}\n\ndef get_order(event, context):\n    order_id = (event.get(\"pathParameters\") or {}).get(\"order_id\")\n    if not order_id:\n        return {\"statusCode\":400,\"body\":\"order_id required\"}\n    res = dynamodb.Table(TABLE_NAME).get_item(Key={\"order_id\": order_id})\n    if \"Item\" not in res:\n        return {\"statusCode\":404,\"body\":\"Not found\"}\n    return {\"statusCode\":200,\"body\":json.dumps(res[\"Item\"])}"
+      },
+      {
+        "path": "src/receipts/worker.py",
+        "content": "# src/receipts/worker.py\nimport json, os\ndef handler(event, context):\n    # EventBridge batch; no-op mock for demo.\n    _ = os.getenv(\"EVENT_BUS_NAME\", \"\")\n    return {\"ok\": True, \"records\": len(event.get(\"Records\", [])) if isinstance(event.get(\"Records\"), list) else 0}"
+      },
+      {
+        "path": "src/ingestor/process_csv.py",
+        "content": "# src/ingestor/process_csv.py\nimport csv, os, json, boto3\ns3 = boto3.client(\"s3\")\nevents = boto3.client(\"events\")\n\nBUS_NAME = os.getenv(\"EVENT_BUS_NAME\", \"\")\n\ndef handler(event, context):\n    rec = (event.get(\"Records\") or [])[0][\"s3\"]\n    bucket = rec[\"bucket\"][\"name\"]; key = rec[\"object\"][\"key\"]\n    obj = s3.get_object(Bucket=bucket, Key=key)\n    body = obj[\"Body\"].read().decode()\n    count = 0\n    for row in csv.DictReader(body.splitlines()):\n        if not row.get(\"customer_id\") or not row.get(\"email\"):\n            continue\n        count += 1\n        if BUS_NAME:\n            events.put_events(Entries=[{\n                \"Source\":\"app.crm\",\n                \"DetailType\":\"CustomerUpserted\",\n                \"EventBusName\":BUS_NAME,\n                \"Detail\": json.dumps({\n                    \"customer_id\":row[\"customer_id\"],\n                    \"email\":row[\"email\"],\n                    \"segment\":row.get(\"segment\",\"\")\n                })\n            }])\n    return {\"ok\": True, \"emitted\": count}"
+      },
+      {
+        "path": "src/inventory/handlers.py",
+        "content": "# src/inventory/handlers.py\nimport os, json, time, boto3\nddb = boto3.client(\"dynamodb\")\nTABLE = os.getenv(\"INVENTORY_TABLE\", \"\")\nBUS   = os.getenv(\"EVENT_BUS_NAME\", \"\")\nevents = boto3.client(\"events\")\n\ndef reserve(event, context):\n    body = json.loads(event.get(\"body\") or \"{}\")\n    sku = body.get(\"sku\"); qty = int(body.get(\"qty\", 0)); req = body.get(\"request_id\")\n    if not sku or qty <= 0 or not req:\n        return {\"statusCode\":400,\"body\":json.dumps({\"error\":\"sku, qty>0, request_id required\"})}\n\n    # Idempotency marker: put if not exists\n    try:\n        ddb.put_item(\n          TableName=TABLE,\n          Item={\"sku\":{\"S\":f\"idem#{req}\"}, \"ttl\":{\"N\": str(int(time.time())+86400)}},\n          ConditionExpression=\"attribute_not_exists(sku)\"\n        )\n    except ddb.exceptions.ConditionalCheckFailedException:\n        return {\"statusCode\":200,\"body\":json.dumps({\"status\":\"duplicate\",\"request_id\":req})}\n\n    # Decrement stock with concurrency guard\n    try:\n        resp = ddb.update_item(\n          TableName=TABLE,\n          Key={\"sku\":{\"S\":sku}},\n          UpdateExpression=\"SET qty = qty - :q\",\n          ConditionExpression=\"qty >= :q\",\n          ExpressionAttributeValues={\":q\":{\"N\": str(qty)}},\n          ReturnValues=\"ALL_NEW\"\n        )\n    except ddb.exceptions.ConditionalCheckFailedException:\n        return {\"statusCode\":409,\"body\":json.dumps({\"error\":\"insufficient\"})}\n\n    remaining = int(resp[\"Attributes\"][\"qty\"][\"N\"])\n    if BUS:\n        events.put_events(Entries=[{\n          \"Source\":\"app.inventory\",\n          \"DetailType\":\"InventoryReserved\",\n          \"EventBusName\":BUS,\n          \"Detail\": json.dumps({\"sku\":sku,\"qty\":qty,\"remaining\":remaining,\"request_id\":req})\n        }])\n    return {\"statusCode\":200,\"body\":json.dumps({\"remaining\":remaining})}"
+      },
+      {
+        "path": "src/ops/health.py",
+        "content": "# src/ops/health.py\nimport json, os, time\ndef handler(event, context):\n    return {\n      \"statusCode\": 200,\n      \"body\": json.dumps({\n        \"status\":\"ok\",\n        \"sha\": os.getenv(\"BUILD_SHA\",\"dev\"),\n        \"time\": time.strftime(\"%Y-%m-%dT%H:%M:%SZ\")\n      })\n    }"
+      }
+    ]
+  },
+  "infra": {
+    "terraform": {
+      "files": [
+        {
+          "path": "infra/terraform/backend.tf",
+          "content": "# infra/terraform/backend.tf\n# Backend configuration intentionally empty.\n# Configure via CI with: terraform init -backend-config=\"bucket=...\" -backend-config=\"key=...\" etc.\nterraform {\n  backend \"s3\" {}\n}"
+        },
+        {
+          "path": "infra/terraform/providers.tf",
+          "content": "# infra/terraform/providers.tf\nterraform {\n  required_version = \">= 1.7.0\"\n  required_providers {\n    aws = { source = \"hashicorp/aws\", version = \">= 5.0\" }\n  }\n}\n\nprovider \"aws\" {\n  region = var.region\n  default_tags {\n    tags = merge(var.tags, {\n      Project     = var.project\n      Environment = var.env\n      ManagedBy   = \"Terraform\"\n    })\n  }\n}\n\nvariable \"region\"  { type = string }\nvariable \"project\" { type = string }\nvariable \"env\"     { type = string }\nvariable \"tags\"    { type = map(string) default = {} }"
+        },
+        {
+          "path": "infra/terraform/main.tf",
+          "content": "# infra/terraform/main.tf\n# Core infrastructure overlay for serverless backend\n\nlocals {\n  prefix = \"${var.project}-${var.env}\"\n}\n\n# ========== DynamoDB Tables ==========\nresource \"aws_dynamodb_table\" \"orders\" {\n  name         = \"${local.prefix}-orders\"\n  billing_mode = \"PAY_PER_REQUEST\"\n  hash_key     = \"order_id\"\n\n  attribute {\n    name = \"order_id\"\n    type = \"S\"\n  }\n\n  tags = var.tags\n}\n\nresource \"aws_dynamodb_table\" \"inventory\" {\n  name         = \"${local.prefix}-inventory\"\n  billing_mode = \"PAY_PER_REQUEST\"\n  hash_key     = \"sku\"\n\n  attribute {\n    name = \"sku\"\n    type = \"S\"\n  }\n\n  ttl {\n    attribute_name = \"ttl\"\n    enabled        = true\n  }\n\n  tags = var.tags\n}\n\n# ========== EventBridge Bus ==========\nresource \"aws_cloudwatch_event_bus\" \"main\" {\n  name = \"${local.prefix}-events\"\n  tags = var.tags\n}\n\n# ========== S3 Bucket for CRM Ingestion ==========\nresource \"aws_s3_bucket\" \"crm_ingestion\" {\n  bucket        = \"${local.prefix}-crm-ingestion\"\n  force_destroy = true\n  tags          = var.tags

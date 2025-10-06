@@ -1,0 +1,12 @@
+From the BRD, infer domains and attach measurable outcomes.
+
+For each domain:
+name, target_outcomes[{metric, baseline?, target, time_horizon}], workstreams[{title, links_to_outcome}], dependencies, priority, evidence.
+
+[INPUT: BRD]
+{BRD_TEXT}
+
+[SCHEMA]
+{SCHEMA}
+
+Output JSON. Prefer outcomes like cycle time, defect rate, p95 latency, DQ pass%.

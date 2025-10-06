@@ -1,0 +1,38 @@
+```json
+{
+  "code": "judge_modernization_domains",
+  "prompt": "You are the Judge. Input A: BRD (source of truth). Input B: an agent's JSON output classifying modernization domains.\n\nScore the output on these criteria (0–5 each; integers only):\n1) Coverage: captures all major domains implied by BRD.\n2) Evidence fidelity: every claim cites plausible BRD locator + faithful excerpt.\n3) Business alignment: ties to stated goals/pain points, not generic fluff.\n4) Actionability: workstreams are concrete, minimally viable, and testable.\n5) Prioritization logic: value vs. effort and dependencies make sense.\n6) Clarity/structure: valid JSON, concise, non-redundant.\n7) Hallucination control: avoids claims not grounded in BRD; uncertainties labeled.\n\nSTRICT FORMAT Inputs:\n[BRD]\n{{BRD_TEXT}}\n\nWeighting: coverage 20, evidence 20, alignment 15, actionability 15, priority_logic 15, clarity 10, hallucination 5. Cap total at 100. If JSON invalid, set clarity=0 and weighted_total ≤ 40.\n\n[CANDIDATES]\nFor each item:\n---BEGIN---\nprompt: {{PROMPT_STEM}}\nauto_metrics_json: {{AUTO_JSON}}\nxml:\n{{XML}}\n---END---\n\nOutput JSON only. No Markdown, no comments.\n\nReturn STRICT JSON only with this schema:\n{\n  \"ranking\": [\n    {\"prompt\": \"<prompt_stem>\", \"score\": <0-100 integer>, \"reasons\": \"<one-line>\"},\n    ...\n  ],\n  \"winner\": \"<prompt_stem>\",\n  \"notes\": \"<short global notes>\"\n}",
+  "metadata": {
+    "agent_name": "judge_modernization_domains",
+    "version": "1.0.0",
+    "description": "Evaluates and ranks modernization domain classification outputs against BRD source of truth using weighted scoring criteria",
+    "input_schema": {
+      "BRD_TEXT": "string - The Business Requirements Document text",
+      "PROMPT_STEM": "string - Identifier for the prompt variant being evaluated",
+      "AUTO_JSON": "string - Auto-generated metrics in JSON format",
+      "XML": "string - The agent's XML/JSON output to be judged"
+    },
+    "output_schema": {
+      "ranking": "array of objects with prompt, score (0-100), and reasons",
+      "winner": "string - prompt_stem of highest scoring candidate",
+      "notes": "string - brief global observations"
+    },
+    "scoring_criteria": {
+      "coverage": {"weight": 20, "max": 5, "description": "Captures all major domains implied by BRD"},
+      "evidence_fidelity": {"weight": 20, "max": 5, "description": "Every claim cites plausible BRD locator + faithful excerpt"},
+      "business_alignment": {"weight": 15, "max": 5, "description": "Ties to stated goals/pain points, not generic fluff"},
+      "actionability": {"weight": 15, "max": 5, "description": "Workstreams are concrete, minimally viable, and testable"},
+      "prioritization_logic": {"weight": 15, "max": 5, "description": "Value vs. effort and dependencies make sense"},
+      "clarity_structure": {"weight": 10, "max": 5, "description": "Valid JSON, concise, non-redundant"},
+      "hallucination_control": {"weight": 5, "max": 5, "description": "Avoids claims not grounded in BRD; uncertainties labeled"}
+    },
+    "constraints": [
+      "Total score capped at 100",
+      "If JSON invalid, clarity=0 and weighted_total ≤ 40",
+      "All scores must be integers",
+      "Output must be valid JSON only, no markdown"
+    ]
+  },
+  "token_budget": 200000
+}
+```

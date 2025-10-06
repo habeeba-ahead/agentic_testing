@@ -1,0 +1,57 @@
+<architectureRules version="1.0">
+  <cloud provider="aws" style="serverless">
+    <languages primary="python" runtime="python3.11"/>
+    <infrastructure asCode="terraform" templatesImmutable="true"/>
+  </cloud>
+
+  <naming>
+    <pattern key="resource">{"${project}-${env}-${component}"}</pattern>
+    <variables required="project,env,region"/>
+  </naming>
+
+  <security>
+    <secrets storage="ssm-parameter-store" inRepo="forbidden"/>
+    <iam principle="least-privilege" denyWildcards="true"/>
+    <ci auth="github-oidc"/>
+  </security>
+
+  <observability>
+    <logging format="json" level="info"/>
+    <metrics provider="cloudwatch"/>
+    <tracing tool="xray" enabledIfReferenced="true"/>
+    <alarms minimum="errors,throttles,api5xx"/>
+  </observability>
+
+  <services>
+    <service type="http-api" tech="apigatewayv2" proxy="lambda"/>
+    <service type="function" tech="lambda" runtime="python3.11"/>
+    <service type="kv" tech="dynamodb" billing="on-demand"/>
+    <service type="events" tech="eventbridge"/>
+    <service type="object-store" tech="s3"/>
+  </services>
+
+  <wiring>
+    <http to="lambda" methodConstraint="ANY" payloadVersion="2.0"/>
+    <s3 to="lambda" events="s3:ObjectCreated:*"/>
+    <eventbridge to="lambda" pattern="source + detail-type"/>
+  </wiring>
+
+  <config>
+    <envVars discoverFromCode="true" requiredIfReferenced="true"/>
+    <state backend="s3" lockTable="dynamodb" configuredByOverlay="true"/>
+    <resourceRefs via="variables,outputs,data-sources" avoidHardcodedArns="true"/>
+  </config>
+
+  <reliability>
+    <idempotency enabledIfMentioned="true" ttlSecondsDefault="86400"/>
+    <concurrency guardWith="dynamodb-conditional-expressions"/>
+    <dlq addIfExplicitlyRequested="true"/>
+    <retries client="exponential-backoff"/>
+  </reliability>
+
+  <ci>
+    <stages>lint,test,package,terraform-validate,plan,apply-staging</stages>
+    <preview on="pull_request" apply="false"/>
+    <staging on="push:main" apply="true"/>
+  </ci>
+</architectureRules>

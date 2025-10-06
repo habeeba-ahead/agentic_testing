@@ -1,0 +1,155 @@
+xml
+<ArchitectureSpec version="1.0">
+  <Context>
+    <AppName>Monolith Training Application</AppName>
+    <BusinessCapabilities>User Authentication, Course Management, User Enrollment, Session Management, Configuration Management, Logging and Monitoring</BusinessCapabilities>
+    <Criticality>high</Criticality>
+  </Context>
+
+  <Decisions>
+    <DomainStyle>microservices</DomainStyle>
+    <IntegrationStyle>event-driven with REST</IntegrationStyle>
+    <Runtime>python</Runtime>
+    <DataTier>aurora serverless v2, dynamodb, s3</DataTier>
+    <InfraBaseline>serverless</InfraBaseline>
+  </Decisions>
+
+  <Patterns>
+    <Pattern name="API Gateway Facade" rationale="Maintains backward compatibility (GR-002) while routing to microservices; centralizes authentication and rate limiting"/>
+    <Pattern name="Database per Service" rationale="Enables independent scaling and deployment; Aurora for relational course/enrollment data, DynamoDB for sessions and high-write user activity"/>
+    <Pattern name="Event-Driven Integration" rationale="Decouples services for enrollment events, course updates; uses EventBridge for async workflows"/>
+    <Pattern name="Circuit Breaker" rationale="Implements resilience for service-to-service calls (REQ-010); prevents cascade failures"/>
+    <Pattern name="Distributed Session Store" rationale="DynamoDB-backed sessions enable stateless Lambda functions and horizontal scaling (REQ-006)"/>
+    <Pattern name="Centralized Configuration" rationale="AWS Systems Manager Parameter Store for environment-specific config; supports dynamic updates (REQ-011)"/>
+    <Pattern name="Strangler Fig Migration" rationale="Gradual migration from monolith with API Gateway routing; minimizes risk and maintains availability (GR-006)"/>
+    <Pattern name="CQRS Light" rationale="Separate read/write paths for course catalog (DynamoDB) vs enrollment transactions (Aurora); optimizes caching (REQ-013)"/>
+    <Pattern name="Saga Pattern" rationale="Manages distributed enrollment transactions across course and user services; ensures data consistency"/>
+    <Pattern name="API Versioning" rationale="Supports backward compatibility during migration; allows gradual client migration"/>
+  </Patterns>
+
+  <NonFunctionals>
+    <Availability target="99.9%"/>
+    <Latency p95_ms="500"/>
+    <Throughput rps="1000"/>
+    <Security notes="IAM for service auth; Cognito for user auth; KMS encryption at rest; TLS 1.3 in transit; Secrets Manager for credentials; WAF on API Gateway; security scanning in CI/CD (GR-004)"/>
+    <Compliance notes="GDPR compliance for user data; data residency controls via region selection; audit logging to S3; 90-day log retention (GR-007)"/>
+    <Observability notes="CloudWatch Logs with structured JSON; X-Ray for distributed tracing; OTEL instrumentation; correlation IDs across services; real-time dashboards for SLA metrics (REQ-007)"/>
+    <CostGuardrails notes="Serverless-first to minimize idle costs; DynamoDB on-demand for variable load; Aurora Serverless v2 auto-scaling; monthly cost reviews with 120% cap (GR-005); S3 lifecycle policies for log archival"/>
+  </NonFunctionals>
+
+  <Services>
+    <Service name="AuthService" domain="Identity">
+      <APIs>
+        <API name="Login" protocol="REST" auth="Cognito" sync_or_async="sync"/>
+        <API name="ValidateToken" protocol="REST" auth="IAM" sync_or_async="sync"/>
+        <API name="GetUserRoles" protocol="REST" auth="IAM" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="Cognito User Pool" purpose="User credentials and profiles"/>
+        <Store type="DynamoDB" purpose="Role mappings and authorization cache"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="topic" name="UserAuthEvents" purpose="Publish login/logout events for audit"/>
+      </QueuesTopics>
+    </Service>
+
+    <Service name="CourseService" domain="Course Management">
+      <APIs>
+        <API name="CreateCourse" protocol="REST" auth="Cognito+IAM" sync_or_async="sync"/>
+        <API name="UpdateCourse" protocol="REST" auth="Cognito+IAM" sync_or_async="sync"/>
+        <API name="DeleteCourse" protocol="REST" auth="Cognito+IAM" sync_or_async="sync"/>
+        <API name="GetCourse" protocol="REST" auth="Cognito+IAM" sync_or_async="sync"/>
+        <API name="ListCourses" protocol="REST" auth="Cognito+IAM" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="Aurora Serverless v2" purpose="Course master data with relational integrity"/>
+        <Store type="DynamoDB" purpose="Course catalog cache for fast reads"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="topic" name="CourseEvents" purpose="Publish course create/update/delete events"/>
+      </QueuesTopics>
+    </Service>
+
+    <Service name="EnrollmentService" domain="Enrollment Management">
+      <APIs>
+        <API name="EnrollUser" protocol="REST" auth="Cognito+IAM" sync_or_async="sync"/>
+        <API name="UnenrollUser" protocol="REST" auth="Cognito+IAM" sync_or_async="sync"/>
+        <API name="GetEnrollments" protocol="REST" auth="Cognito+IAM" sync_or_async="sync"/>
+        <API name="GetEnrollmentHistory" protocol="REST" auth="Cognito+IAM" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="Aurora Serverless v2" purpose="Enrollment transactions and history"/>
+        <Store type="DynamoDB" purpose="Active enrollment status for fast lookups"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="topic" name="EnrollmentEvents" purpose="Publish enrollment state changes"/>
+        <Channel type="queue" name="EnrollmentQueue" purpose="Process async enrollment requests during peak load"/>
+      </QueuesTopics>
+    </Service>
+
+    <Service name="SessionService" domain="Session Management">
+      <APIs>
+        <API name="CreateSession" protocol="REST" auth="IAM" sync_or_async="sync"/>
+        <API name="GetSession" protocol="REST" auth="IAM" sync_or_async="sync"/>
+        <API name="InvalidateSession" protocol="REST" auth="IAM" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="DynamoDB" purpose="Distributed session store with TTL"/>
+      </DataStores>
+      <QueuesTopics/>
+    </Service>
+
+    <Service name="ValidationService" domain="Business Rules">
+      <APIs>
+        <API name="ValidateCourseData" protocol="REST" auth="IAM" sync_or_async="sync"/>
+        <API name="ValidateEnrollmentRules" protocol="REST" auth="IAM" sync_or_async="sync"/>
+        <API name="CheckCapacity" protocol="REST" auth="IAM" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="DynamoDB" purpose="Business rules configuration"/>
+      </DataStores>
+      <QueuesTopics/>
+    </Service>
+
+    <Service name="NotificationService" domain="Notifications">
+      <APIs>
+        <API name="SendNotification" protocol="REST" auth="IAM" sync_or_async="async"/>
+      </APIs>
+      <DataStores>
+        <Store type="DynamoDB" purpose="Notification templates and delivery status"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="queue" name="NotificationQueue" purpose="Queue notifications for async delivery"/>
+      </QueuesTopics>
+    </Service>
+  </Services>
+
+  <Constraints>
+    <Must>Zero data loss during migration (GR-001); 100% backward compatibility for existing APIs (GR-002); meet or exceed monolith performance (GR-003); 99.5% availability during migration (GR-006); encryption at rest and in transit (GR-004); 80% unit test coverage, 100% critical path coverage (GR-010); rollback capability within 15 minutes (GR-011); all changes through approved change management (GR-008)</Must>
+    <Should>Minimize vendor lock-in using abstraction layers (GR-012); achieve 10% cost reduction by month 12; support 3x current load; reduce MTTR to under 30 minutes; complete migration within 12 months; improve deployment frequency to 4+ per month per service</Should>
+    <MustNot>Exceed 120% of current operational costs in year one (GR-005); introduce critical security vulnerabilities (GR-004); violate data privacy regulations (GR-007); deploy without complete documentation (GR-009); skip testing coverage thresholds (GR-010)</MustNot>
+  </Constraints>
+
+  <CloudMapping provider="AWS">
+    <Compute>Lambda functions (Python 3.11 runtime) for all service logic; API Gateway Lambda authorizers for custom auth; Step Functions for saga orchestration</Compute>
+    <Networking>API Gateway REST APIs with custom domains; VPC for Aurora Serverless v2; PrivateLink for service-to-service; WAF for API protection; Route53 for DNS; CloudFront for static assets if needed</Networking>
+    <Data>Aurora Serverless v2 PostgreSQL (course and enrollment relational data); DynamoDB (sessions, user activity, course catalog cache, configuration); S3 (event logs, backups, audit trails); ElastiCache Redis (optional for caching layer per REQ-013)</Data>
+    <Messaging>EventBridge (event bus for CourseEvents, EnrollmentEvents, UserAuthEvents); SQS (EnrollmentQueue, NotificationQueue for async processing); SNS (optional for fan-out patterns)</Messaging>
+    <Identity>Cognito User Pools (user authentication); IAM roles and policies (service-to-service auth); Secrets Manager (database credentials, API keys); KMS (encryption keys); Systems Manager Parameter Store (configuration management)</Identity>
+  </CloudMapping>
+
+  <Risks>
+    <Risk item="Java to Python migration complexity" mitigation="Phased migration with strangler fig pattern; comprehensive integration testing; maintain Java monolith as fallback during transition"/>
+    <Risk item="Distributed transaction consistency across microservices" mitigation="Implement saga pattern with compensating transactions; event sourcing for audit trail; idempotency keys for enrollment operations"/>
+    <Risk item="Aurora Serverless v2 cold start latency" mitigation="Configure minimum ACU capacity; implement connection pooling via RDS Proxy; cache frequent queries in DynamoDB"/>
+    <Risk item="DynamoDB cost overrun on high-write scenarios" mitigation="Use on-demand billing initially; monitor and switch to provisioned capacity with auto-scaling; implement write buffering via SQS"/>
+    <Risk item="API Gateway throttling during peak enrollment" mitigation="Configure usage plans and burst limits; implement SQS-based async enrollment processing; load test at 3x expected peak"/>
+    <Risk item="Session data migration from in-memory to DynamoDB" mitigation="Dual-write pattern during transition; session TTL matches monolith timeout; comprehensive session failover testing"/>
+    <Risk item="Incomplete business rule migration" mitigation="Comprehensive rule inventory and mapping; validation service with 100% test coverage; parallel run validation against monolith"/>
+    <Risk item="CloudWatch costs for high-volume logging" mitigation="Structured logging with appropriate log levels; log sampling for non-critical paths; S3 archival with lifecycle policies"/>
+    <Risk item="Cross-service latency exceeding 500ms p95 target" mitigation="Service mesh or client-side load balancing; aggressive caching strategy; async processing where possible; circuit breakers to fail fast"/>
+    <Risk item="Vendor lock-in despite GR-012" mitigation="Abstract AWS-specific services behind interfaces; document portability strategy; use open standards (OTEL, OpenAPI) where possible"/>
+    <Risk item="Data residency compliance for multi-region" mitigation="Single-region deployment initially; data classification and routing rules; legal review of data flows"/>
+    <Risk item="Rollback complexity in distributed system" mitigation="Feature flags for gradual rollout; database migration versioning; automated rollback scripts tested in staging; blue-green deployment strategy"/>
+  </Risks>
+</ArchitectureSpec>

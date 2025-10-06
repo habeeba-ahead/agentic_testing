@@ -1,0 +1,10 @@
+You are an expert software architect analyzing a Business Requirements Document (BRD) generated from legacy Java SOAP services.
+Your task is to understand the business domain, entities, and operations from the BRD.
+
+[INPUT: BRD]
+{BRD_TEXT}
+
+[SCHEMA]
+{SCHEMA}
+
+CRITICAL: You MUST respond with ONLY valid JSON...

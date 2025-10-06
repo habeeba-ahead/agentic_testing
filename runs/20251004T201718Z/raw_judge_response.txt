@@ -1,0 +1,23 @@
+```json
+{
+  "ranking": [
+    {
+      "prompt": "A_prompt",
+      "score": 92,
+      "reasons": "Complete modules with all required files (main.tf, variables.tf, outputs.tf, README.md); S3 module enforces TLS via bucket policy when force_ssl=true; SQS module includes DLQ, encryption, and CloudWatch alarms; no provider blocks; no hard-coded account data; comprehensive documentation; least-privilege IAM patterns described; public access blocked on S3."
+    },
+    {
+      "prompt": "C_prompt",
+      "score": 88,
+      "reasons": "Complete modules with all required files; S3 module enforces TLS-only policy unconditionally (good security default); public access blocked; encryption at rest; lifecycle policies; SQS module with DLQ and alarms; SNS module included; no provider blocks; no hard-coded account data; slightly less detailed documentation than A_prompt."
+    },
+    {
+      "prompt": "B_prompt",
+      "score": 85,
+      "reasons": "Includes PATTERNS.md overview (good for context); complete modules with all required files; S3 module enforces TLS when force_ssl=true; public access blocked; encryption at rest; SQS module with DLQ; no provider blocks; no hard-coded account data; documentation is comprehensive but PATTERNS.md is not a module file (minor structural deviation); slightly verbose."
+    }
+  ],
+  "winner": "A_prompt",
+  "notes": "All candidates are valid and compliant. A_prompt edges ahead with the most complete and well-structured modules, clear conditional TLS enforcement, comprehensive README documentation, and no extraneous files. C_prompt is a close second with unconditional TLS enforcement (stricter default). B_prompt includes a helpful PATTERNS.md but is slightly less modular in structure."
+}
+```

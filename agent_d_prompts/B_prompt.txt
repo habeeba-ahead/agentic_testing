@@ -1,0 +1,13 @@
+[INPUT: architecture xml]
+{RULES_TEXT}
+
+TASK:
+- Produce the Terraform patterns library for the resources implied above.
+- Include modules: s3_bucket, sqs_queue, lambda_function, apigw_http, vpc_minimal.
+- Each module must have main.tf, variables.tf, outputs.tf, README.md.
+- Add a top-level PATTERNS.md summarizing usage and security defaults.
+- Apply tags from <policies>. Enforce TLS-only on buckets when forceSsl=true.
+- NO stacks, NO provider blocks.
+
+OUTPUT:
+Return ONLY the single JSON object per the schema in the system prompt. No explanations.

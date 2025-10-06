@@ -1,0 +1,239 @@
+```xml
+<ArchitectureSpec>
+  <Metadata>
+    <Version>1.0</Version>
+    <LastModified>2024-01-01</LastModified>
+    <Status>Target</Status>
+    <Cloud>AWS</Cloud>
+    <IaC>Terraform</IaC>
+  </Metadata>
+
+  <Decisions>
+    <Decision>
+      <ID>DEC-001</ID>
+      <Title>Serverless-First Architecture</Title>
+      <Context>Minimize operational overhead and optimize for variable workloads with pay-per-use pricing model</Context>
+      <Choice>AWS Lambda with Python 3.11 runtime for all compute workloads</Choice>
+      <Alternatives>
+        <Alternative>ECS Fargate - higher baseline cost, more operational complexity</Alternative>
+        <Alternative>EC2 - significant operational overhead, poor cost efficiency for variable load</Alternative>
+      </Alternatives>
+      <Rationale>Serverless eliminates infrastructure management, scales automatically, and caps idle costs to near-zero for MVP phase</Rationale>
+      <Implications>Cold start latency, 15-minute execution limit, stateless design required</Implications>
+    </Decision>
+
+    <Decision>
+      <ID>DEC-002</ID>
+      <Title>Polyglot Persistence Strategy</Title>
+      <Context>Different data access patterns require optimized storage solutions</Context>
+      <Choice>DynamoDB for high-write KV operations, Aurora Serverless v2 for relational queries, S3 for event sourcing and logs</Choice>
+      <Alternatives>
+        <Alternative>Single RDS instance - poor write scalability, higher cost</Alternative>
+        <Alternative>DocumentDB - unnecessary complexity for KV patterns</Alternative>
+      </Alternatives>
+      <Rationale>Match storage engine to access pattern: DynamoDB for sub-10ms writes at scale, Aurora for complex joins, S3 for immutable audit trail</Rationale>
+      <Implications>Data consistency boundaries, cross-store query complexity, eventual consistency handling</Implications>
+    </Decision>
+
+    <Decision>
+      <ID>DEC-003</ID>
+      <Title>Event-Driven Integration Pattern</Title>
+      <Context>Decouple services and enable asynchronous processing</Context>
+      <Choice>EventBridge for domain events and service integration, SQS for reliable work queues with retry semantics</Choice>
+      <Alternatives>
+        <Alternative>SNS - less flexible routing, no event replay</Alternative>
+        <Alternative>Kinesis - over-engineered for MVP, higher cost</Alternative>
+      </Alternatives>
+      <Rationale>EventBridge provides schema registry, content-based routing, and native AWS service integration; SQS ensures at-least-once delivery with DLQ support</Rationale>
+      <Implications>Idempotency required, eventual consistency, message ordering considerations</Implications>
+    </Decision>
+
+    <Decision>
+      <ID>DEC-004</ID>
+      <Title>API Gateway for REST Endpoints</Title>
+      <Context>Expose synchronous APIs with authentication, throttling, and monitoring</Context>
+      <Choice>API Gateway REST API with Lambda proxy integration</Choice>
+      <Alternatives>
+        <Alternative>Application Load Balancer - requires target management, less feature-rich</Alternative>
+        <Alternative>API Gateway HTTP API - missing features like request validation, caching</Alternative>
+      </Alternatives>
+      <Rationale>Built-in request validation, API keys, usage plans, caching, and WAF integration reduce custom code</Rationale>
+      <Implications>29-second timeout limit, payload size limits, additional latency layer</Implications>
+    </Decision>
+
+    <Decision>
+      <ID>DEC-005</ID>
+      <Title>OpenTelemetry for Observability</Title>
+      <Context>Unified observability across distributed serverless components</Context>
+      <Choice>CloudWatch for metrics and logs with OTEL SDK for distributed tracing and structured logging</Choice>
+      <Alternatives>
+        <Alternative>X-Ray only - vendor lock-in, limited trace analysis</Alternative>
+        <Alternative>Third-party APM - additional cost, data egress charges</Alternative>
+      </Alternatives>
+      <Rationale>OTEL provides vendor-neutral instrumentation with CloudWatch as cost-effective backend for MVP; enables future migration to alternative backends</Rationale>
+      <Implications>Lambda layer overhead, trace sampling strategy needed, log volume management</Implications>
+    </Decision>
+
+    <Decision>
+      <ID>DEC-006</ID>
+      <Title>IAM for Zero-Trust Security</Title>
+      <Context>Enforce least-privilege access across all components</Context>
+      <Choice>IAM roles per Lambda function, Secrets Manager for credentials, KMS for encryption at rest</Choice>
+      <Alternatives>
+        <Alternative>Shared IAM roles - security risk, audit complexity</Alternative>
+        <Alternative>Parameter Store - lacks automatic rotation, audit trail</Alternative>
+      </Alternatives>
+      <Rationale>Fine-grained IAM policies limit blast radius; Secrets Manager automates rotation; KMS provides audit trail for encryption operations</Rationale>
+      <Implications>IAM policy complexity, secret rotation coordination, KMS API throttling considerations</Implications>
+    </Decision>
+
+    <Decision>
+      <ID>DEC-007</ID>
+      <Title>Terraform for Infrastructure as Code</Title>
+      <Context>Reproducible, version-controlled infrastructure provisioning</Context>
+      <Choice>Terraform with remote state in S3 and DynamoDB state locking</Choice>
+      <Alternatives>
+        <Alternative>CloudFormation - AWS-only, verbose syntax</Alternative>
+        <Alternative>CDK - requires compilation step, less mature</Alternative>
+      </Alternatives>
+      <Rationale>Declarative syntax, broad provider support, mature ecosystem, plan/apply workflow reduces errors</Rationale>
+      <Implications>State file management, provider version pinning, module versioning strategy required</Implications>
+    </Decision>
+  </Decisions>
+
+  <Patterns>
+    <Pattern>
+      <Name>API Gateway Lambda Proxy</Name>
+      <Category>Integration</Category>
+      <Description>API Gateway forwards entire request to Lambda, returns entire response</Description>
+      <UseCase>REST API endpoints with custom business logic</UseCase>
+      <Implementation>
+        <Component>API Gateway REST API</Component>
+        <Component>Lambda function with proxy integration</Component>
+        <Component>IAM execution role</Component>
+      </Implementation>
+      <Benefits>
+        <Benefit>Simplified request/response handling</Benefit>
+        <Benefit>Full access to HTTP context</Benefit>
+        <Benefit>Automatic JSON serialization</Benefit>
+      </Benefits>
+      <Tradeoffs>
+        <Tradeoff>Lambda must handle all HTTP concerns</Tradeoff>
+        <Tradeoff>No built-in request transformation</Tradeoff>
+      </Tradeoffs>
+    </Pattern>
+
+    <Pattern>
+      <Name>Event Sourcing with S3</Name>
+      <Category>Data</Category>
+      <Description>Append-only event log stored in S3 with EventBridge notifications</Description>
+      <UseCase>Audit trail, event replay, compliance requirements</UseCase>
+      <Implementation>
+        <Component>S3 bucket with versioning and lifecycle policies</Component>
+        <Component>EventBridge rule on S3 object creation</Component>
+        <Component>Lambda consumers for event processing</Component>
+      </Implementation>
+      <Benefits>
+        <Benefit>Immutable audit trail</Benefit>
+        <Benefit>Unlimited retention at low cost</Benefit>
+        <Benefit>Event replay capability</Benefit>
+      </Benefits>
+      <Tradeoffs>
+        <Tradeoff>Eventual consistency for reads</Tradeoff>
+        <Tradeoff>Query complexity without indexing</Tradeoff>
+      </Tradeoffs>
+    </Pattern>
+
+    <Pattern>
+      <Name>DynamoDB Single-Table Design</Name>
+      <Category>Data</Category>
+      <Description>Multiple entity types in one table using composite keys and GSIs</Description>
+      <UseCase>High-throughput KV operations with related entities</UseCase>
+      <Implementation>
+        <Component>DynamoDB table with composite PK/SK</Component>
+        <Component>GSIs for alternate access patterns</Component>
+        <Component>DynamoDB Streams for change data capture</Component>
+      </Implementation>
+      <Benefits>
+        <Benefit>Sub-10ms latency at any scale</Benefit>
+        <Benefit>Reduced cross-table joins</Benefit>
+        <Benefit>Cost-efficient for high write volumes</Benefit>
+      </Benefits>
+      <Tradeoffs>
+        <Tradeoff>Complex key design upfront</Tradeoff>
+        <Tradeoff>Limited ad-hoc query capability</Tradeoff>
+        <Tradeoff>400KB item size limit</Tradeoff>
+      </Tradeoffs>
+    </Pattern>
+
+    <Pattern>
+      <Name>SQS Dead Letter Queue</Name>
+      <Category>Reliability</Category>
+      <Description>Failed messages routed to DLQ after max retry attempts</Description>
+      <UseCase>Reliable async processing with failure isolation</UseCase>
+      <Implementation>
+        <Component>Primary SQS queue with redrive policy</Component>
+        <Component>DLQ for failed messages</Component>
+        <Component>CloudWatch alarm on DLQ depth</Component>
+        <Component>Lambda for DLQ analysis and replay</Component>
+      </Implementation>
+      <Benefits>
+        <Benefit>Prevents poison pill blocking</Benefit>
+        <Benefit>Failure analysis and debugging</Benefit>
+        <Benefit>Manual or automated replay</Benefit>
+      </Benefits>
+      <Tradeoffs>
+        <Tradeoff>Additional queue management</Tradeoff>
+        <Tradeoff>Message ordering not preserved</Tradeoff>
+      </Tradeoffs>
+    </Pattern>
+
+    <Pattern>
+      <Name>Lambda Layer for Shared Dependencies</Name>
+      <Category>Code Organization</Category>
+      <Description>Common libraries packaged as Lambda layers</Description>
+      <UseCase>OTEL SDK, shared utilities, common business logic</UseCase>
+      <Implementation>
+        <Component>Lambda layer with Python packages</Component>
+        <Component>Version management in Terraform</Component>
+        <Component>Layer attached to multiple functions</Component>
+      </Implementation>
+      <Benefits>
+        <Benefit>Reduced deployment package size</Benefit>
+        <Benefit>Faster deployments</Benefit>
+        <Benefit>Centralized dependency management</Benefit>
+      </Benefits>
+      <Tradeoffs>
+        <Tradeoff>250MB total size limit (layers + function)</Tradeoff>
+        <Tradeoff>Version coordination complexity</Tradeoff>
+      </Tradeoffs>
+    </Pattern>
+
+    <Pattern>
+      <Name>Circuit Breaker for External Dependencies</Name>
+      <Category>Reliability</Category>
+      <Description>Fail fast when downstream service is unhealthy</Description>
+      <UseCase>Calls to Aurora, external APIs, third-party services</UseCase>
+      <Implementation>
+        <Component>Circuit breaker library in Lambda</Component>
+        <Component>DynamoDB for circuit state persistence</Component>
+        <Component>CloudWatch metrics for circuit state</Component>
+      </Implementation>
+      <Benefits>
+        <Benefit>Prevents cascade failures</Benefit>
+        <Benefit>Faster failure detection</Benefit>
+        <Benefit>Automatic recovery attempts</Benefit>
+      </Benefits>
+      <Tradeoffs>
+        <Tradeoff>Additional state management</Tradeoff>
+        <Tradeoff>Tuning threshold complexity</Tradeoff>
+      </Tradeoffs>
+    </Pattern>
+
+    <Pattern>
+      <Name>Idempotency Token Pattern</Name>
+      <Category>Data Integrity</Category>
+      <Description>Client-provided token ensures exactly-once semantics</Description>
+      <UseCase>Payment processing, order creation, critical mutations</UseCase>
+      <Implementation>
+        <Component>Dynam

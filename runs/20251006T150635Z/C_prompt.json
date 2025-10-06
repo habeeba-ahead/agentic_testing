@@ -1,0 +1,215 @@
+```json
+{
+  "bundle_manifest": [
+    {
+      "path": "infra/terraform/providers_override.tf",
+      "purpose": "Provider configuration with empty S3 backend for CI injection",
+      "generated_bytes": 512
+    },
+    {
+      "path": "infra/terraform/variables.tf",
+      "purpose": "Global variables (project, env, region, tags)",
+      "generated_bytes": 420
+    },
+    {
+      "path": "infra/terraform/dynamodb.tf",
+      "purpose": "DynamoDB tables for orders, inventory, and idempotency",
+      "generated_bytes": 1850
+    },
+    {
+      "path": "infra/terraform/eventbridge.tf",
+      "purpose": "EventBridge bus and rules for event-driven flows",
+      "generated_bytes": 1420
+    },
+    {
+      "path": "infra/terraform/s3.tf",
+      "purpose": "S3 bucket for CRM CSV ingestion",
+      "generated_bytes": 680
+    },
+    {
+      "path": "infra/terraform/api.tf",
+      "purpose": "HTTP API Gateway v2 with CORS",
+      "generated_bytes": 520
+    },
+    {
+      "path": "infra/terraform/lambda_orders.tf",
+      "purpose": "Orders service Lambda functions and IAM",
+      "generated_bytes": 3200
+    },
+    {
+      "path": "infra/terraform/lambda_inventory.tf",
+      "purpose": "Inventory service Lambda function and IAM",
+      "generated_bytes": 2400
+    },
+    {
+      "path": "infra/terraform/lambda_receipts.tf",
+      "purpose": "Receipts worker Lambda function and IAM",
+      "generated_bytes": 1800
+    },
+    {
+      "path": "infra/terraform/lambda_ingestor.tf",
+      "purpose": "CRM CSV ingestor Lambda function and IAM",
+      "generated_bytes": 2200
+    },
+    {
+      "path": "infra/terraform/lambda_health.tf",
+      "purpose": "Health check Lambda function",
+      "generated_bytes": 1200
+    },
+    {
+      "path": "infra/terraform/api_routes.tf",
+      "purpose": "API Gateway routes, integrations, and permissions",
+      "generated_bytes": 2800
+    },
+    {
+      "path": "infra/terraform/alarms.tf",
+      "purpose": "CloudWatch alarms for errors and API 5xx",
+      "generated_bytes": 2600
+    },
+    {
+      "path": "infra/terraform/outputs.tf",
+      "purpose": "Terraform outputs for API endpoint, table names, bus name",
+      "generated_bytes": 680
+    },
+    {
+      "path": "src/orders/glue.py",
+      "purpose": "Adapter wrapper for orders handlers",
+      "generated_bytes": 420
+    },
+    {
+      "path": "src/inventory/glue.py",
+      "purpose": "Adapter wrapper for inventory handler",
+      "generated_bytes": 320
+    },
+    {
+      "path": "src/receipts/glue.py",
+      "purpose": "Adapter wrapper for receipts worker",
+      "generated_bytes": 280
+    },
+    {
+      "path": "src/ingestor/glue.py",
+      "purpose": "Adapter wrapper for CSV ingestor",
+      "generated_bytes": 280
+    },
+    {
+      "path": "src/ops/glue.py",
+      "purpose": "Adapter wrapper for health handler",
+      "generated_bytes": 260
+    },
+    {
+      "path": "tests/unit/test_orders.py",
+      "purpose": "Unit tests for orders handlers",
+      "generated_bytes": 1800
+    },
+    {
+      "path": "tests/unit/test_inventory.py",
+      "purpose": "Unit tests for inventory handler",
+      "generated_bytes": 1600
+    },
+    {
+      "path": "tests/unit/test_receipts.py",
+      "purpose": "Unit tests for receipts worker",
+      "generated_bytes": 800
+    },
+    {
+      "path": "tests/unit/test_ingestor.py",
+      "purpose": "Unit tests for CSV ingestor",
+      "generated_bytes": 1200
+    },
+    {
+      "path": "tests/unit/test_health.py",
+      "purpose": "Unit tests for health handler",
+      "generated_bytes": 600
+    },
+    {
+      "path": "tests/contracts/test_api_contracts.py",
+      "purpose": "Contract tests for API routes and payload shapes",
+      "generated_bytes": 1400
+    },
+    {
+      "path": "tests/contracts/test_event_contracts.py",
+      "purpose": "Contract tests for EventBridge event schemas",
+      "generated_bytes": 1200
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "purpose": "CI/CD pipeline with OIDC, lint, test, plan, and apply",
+      "generated_bytes": 4200
+    },
+    {
+      "path": "ops/iam_policies/orders_policy.json",
+      "purpose": "IAM policy for orders Lambda (DynamoDB + EventBridge)",
+      "generated_bytes": 680
+    },
+    {
+      "path": "ops/iam_policies/inventory_policy.json",
+      "purpose": "IAM policy for inventory Lambda (DynamoDB + EventBridge)",
+      "generated_bytes": 720
+    },
+    {
+      "path": "ops/iam_policies/receipts_policy.json",
+      "purpose": "IAM policy for receipts Lambda (EventBridge receive)",
+      "generated_bytes": 420
+    },
+    {
+      "path": "ops/iam_policies/ingestor_policy.json",
+      "purpose": "IAM policy for ingestor Lambda (S3 read + EventBridge)",
+      "generated_bytes": 580
+    },
+    {
+      "path": "README.md",
+      "purpose": "Project documentation and deployment guide",
+      "generated_bytes": 3200
+    },
+    {
+      "path": "CHANGELOG.md",
+      "purpose": "Version history and changes",
+      "generated_bytes": 420
+    }
+  ],
+  "src": {
+    "files": [
+      {
+        "path": "src/orders/glue.py",
+        "content": "# src/orders/glue.py\n\"\"\"Adapter glue for orders handlers.\"\"\"\nfrom src.orders.handlers import create_order as _create_order\nfrom src.orders.handlers import get_order as _get_order\n\ndef create_order(event, context):\n    \"\"\"Wrapper for create_order handler.\"\"\"\n    return _create_order(event, context)\n\ndef get_order(event, context):\n    \"\"\"Wrapper for get_order handler.\"\"\"\n    return _get_order(event, context)\n"
+      },
+      {
+        "path": "src/inventory/glue.py",
+        "content": "# src/inventory/glue.py\n\"\"\"Adapter glue for inventory handlers.\"\"\"\nfrom src.inventory.handlers import reserve as _reserve\n\ndef reserve(event, context):\n    \"\"\"Wrapper for reserve handler.\"\"\"\n    return _reserve(event, context)\n"
+      },
+      {
+        "path": "src/receipts/glue.py",
+        "content": "# src/receipts/glue.py\n\"\"\"Adapter glue for receipts worker.\"\"\"\nfrom src.receipts.worker import handler as _handler\n\ndef handler(event, context):\n    \"\"\"Wrapper for receipts worker.\"\"\"\n    return _handler(event, context)\n"
+      },
+      {
+        "path": "src/ingestor/glue.py",
+        "content": "# src/ingestor/glue.py\n\"\"\"Adapter glue for CSV ingestor.\"\"\"\nfrom src.ingestor.process_csv import handler as _handler\n\ndef handler(event, context):\n    \"\"\"Wrapper for CSV ingestor.\"\"\"\n    return _handler(event, context)\n"
+      },
+      {
+        "path": "src/ops/glue.py",
+        "content": "# src/ops/glue.py\n\"\"\"Adapter glue for health handler.\"\"\"\nfrom src.ops.health import handler as _handler\n\ndef handler(event, context):\n    \"\"\"Wrapper for health handler.\"\"\"\n    return _handler(event, context)\n"
+      }
+    ]
+  },
+  "infra": {
+    "terraform": {
+      "files": [
+        {
+          "path": "infra/terraform/providers_override.tf",
+          "content": "# infra/terraform/providers_override.tf\nterraform {\n  required_version = \">= 1.7.0\"\n  required_providers {\n    aws = {\n      source  = \"hashicorp/aws\"\n      version = \">= 5.0\"\n    }\n  }\n  # Empty backend block; CI supplies -backend-config flags\n  backend \"s3\" {}\n}\n\nprovider \"aws\" {\n  region = var.region\n  default_tags {\n    tags = var.tags\n  }\n}\n"
+        },
+        {
+          "path": "infra/terraform/variables.tf",
+          "content": "# infra/terraform/variables.tf\nvariable \"project\" {\n  type        = string\n  description = \"Project name for resource naming\"\n}\n\nvariable \"env\" {\n  type        = string\n  description = \"Environment (staging, prod)\"\n}\n\nvariable \"region\" {\n  type        = string\n  description = \"AWS region\"\n  default     = \"us-east-1\"\n}\n\nvariable \"tags\" {\n  type        = map(string)\n  description = \"Common tags for all resources\"\n  default     = {}\n}\n\nvariable \"build_sha\" {\n  type        = string\n  description = \"Git commit SHA for deployment tracking\"\n  default     = \"dev\"\n}\n"
+        },
+        {
+          "path": "infra/terraform/dynamodb.tf",
+          "content": "# infra/terraform/dynamodb.tf\n\n# Orders table\nresource \"aws_dynamodb_table\" \"orders\" {\n  name         = \"${var.project}-${var.env}-orders\"\n  billing_mode = \"PAY_PER_REQUEST\"\n  hash_key     = \"order_id\"\n\n  attribute {\n    name = \"order_id\"\n    type = \"S\"\n  }\n\n  tags = merge(var.tags, {\n    Name = \"${var.project}-${var.env}-orders\"\n  })\n}\n\n# Inventory table (includes idempotency markers with TTL)\nresource \"aws_dynamodb_table\" \"inventory\" {\n  name         = \"${var.project}-${var.env}-inventory\"\n  billing_mode = \"PAY_PER_REQUEST\"\n  hash_key     = \"sku\"\n\n  attribute {\n    name = \"sku\"\n    type = \"S\"\n  }\n\n  ttl {\n    attribute_name = \"ttl\"\n    enabled        = true\n  }\n\n  tags = merge(var.tags, {\n    Name = \"${var.project}-${var.env}-inventory\"\n  })\n}\n\n# Outputs\noutput \"orders_table_name\" {\n  value       = aws_dynamodb_table.orders.name\n  description = \"Orders DynamoDB table name\"\n}\n\noutput \"orders_table_arn\" {\n  value       = aws_dynamodb_table.orders.arn\n  description = \"Orders DynamoDB table ARN\"\n}\n\noutput \"inventory_table_name\" {\n  value       = aws_dynamodb_table.inventory.name\n  description = \"Inventory DynamoDB table name\"\n}\n\noutput \"inventory_table_arn\" {\n  value       = aws_dynamodb_table.inventory.arn\n  description = \"Inventory DynamoDB table ARN\"\n}\n"
+        },
+        {
+          "path": "infra/terraform/eventbridge.tf",
+          "content": "# infra/terraform/eventbridge.tf\n\n# Custom event bus\nresource \"aws_cloudwatch_event_bus\" \"main\" {\n  name = \"${var.project}-${var.env}-bus\"\n  tags = merge(var.tags, {\n    Name = \"${var.project}-${var.env}-bus\"\n  })\n}\n\n# Rule: ReceiptGenerated → receipts worker\nresource \"aws_cloudwatch_event_rule\" \"receipt_generated\" {\n  name           = \"${var.project}-${var.env}-receipt-generated\"\n  event_bus_name = aws_cloudwatch_event_bus.main.name\n  event_pattern = jsonencode({\n    source      = [\"app.orders\"]\n    detail-type = [\"ReceiptGenerated\"]\n  })\n  tags = var.tags\n}\n\nresource \"aws_cloudwatch_event_target\" \"receipt_worker\" {\n  rule           = aws_cloudwatch_event_rule.receipt_generated.name\n  event_bus_name = aws_cloudwatch_event_bus.main.name\n  arn            = aws_lambda_function.receipts_worker.arn\n}\n\nresource \"aws_lambda_permission\" \"receipts_eventbridge\" {\n  statement_id  = \"AllowEventBridgeInvoke\"\n  action        = \"lambda:InvokeFunction\"\n  function_name = aws_lambda_function.receipts_worker.function_name\n  principal     = \"events.amazonaws.com\"\n  source_arn    = aws_cloudwatch_event_rule.receipt_generated.arn\n}\n\n# Output\noutput \"event_bus_name\" {\n  value       = aws_cloudwatch_event_bus.main.name\n  description = \"EventBridge bus name\"\n}\n\noutput \"event_bus_arn\" {\n  value       = aws_cloudwatch_event_bus.main.arn\n  description = \"EventBridge bus ARN\"\n}\n"
+        },
+        {
+          "path": "infra/terraform/s3.tf",
+          "content": "# infra/terraform/s3.tf\n\n# CRM ingestion bucket\nresource \"aws_s3_bucket\" \"crm_ingestion\" {\n  bucket        = \"${var.project}-${var.env}-crm-ingestion\"\n  force_destroy = var.env != \"prod\"\n  tags = merge(var.tags, {\n    Name = \"${var.project}-${var.env}-crm-ingestion\"\n  })\n}\n\nresource \"aws_s3_bucket_public_access_block\" \"crm_ingestion\" {\n  bucket                  = aws_s3_bucket.crm_ingestion.id\n  block_public_acls       = true\n  block_public_policy     = true\n  ignore_public_acls      = true\n  restrict_public_buckets = true\n}\n\n# Output\noutput \"crm_bucket_name\" {\n  value       = aws_s

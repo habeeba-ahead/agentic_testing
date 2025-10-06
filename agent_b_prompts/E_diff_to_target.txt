@@ -1,0 +1,16 @@
+You are modernizing from CURRENT to TARGET under guardrails and must output ArchitectureSpec XML.
+
+[SCHEMA]
+... (schema) ...
+
+[CURRENT from BRD]
+{{BRD_TEXT}}
+
+[GUARDRAILS]
+{{GUARDRAILS_TEXT}}
+
+INSTRUCTIONS:
+- In <Decisions> and <Patterns>, reflect the TARGET state, not current.
+- Add <Risks> for migration hazards (e.g., data model changes, eventual consistency).
+- Map to cloud primitives in <CloudMapping> consistent with guardrails.
+- XML only.
