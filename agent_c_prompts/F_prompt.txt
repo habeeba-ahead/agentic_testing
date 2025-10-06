@@ -1,0 +1,12 @@
+BRD-only. Detect domains with PBM/Payer cues (e.g., 835/834/270-271, PHI/PII handling, pharmacy claims, pricing/adjudication, auditability).
+
+For each domain:
+name, scope (tie to claims, billing, pricing, provider/pharmacy ops), drivers (compliance, cashflow, accuracy, latency), workstreams (e.g., 835 balancing, LF tags, DQ rules), dependencies, priority, evidence.
+
+[INPUT: BRD]
+{BRD_TEXT}
+
+[SCHEMA]
+{SCHEMA}
+
+Return JSON per { system, summary, domains[], cross_domain_view, recommendations }.

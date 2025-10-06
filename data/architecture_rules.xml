@@ -1,0 +1,127 @@
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<ArchitectureSpec version="1.0">
+  <Context>
+    <AppName>Legacy Application Modernization (AWS Migration)</AppName>
+    <BusinessCapabilities>Application Hosting, Data Management, API Integration, Batch Processing, Monitoring and Observability, Backup and Disaster Recovery</BusinessCapabilities>
+    <Criticality>high</Criticality>
+  </Context>
+
+  <Decisions>
+    <DomainStyle>modular monolith transitioning to microservices</DomainStyle>
+    <IntegrationStyle>event-driven, REST</IntegrationStyle>
+    <Runtime>python</Runtime>
+    <DataTier>aurora-serverless-v2, dynamodb, s3</DataTier>
+    <InfraBaseline>serverless</InfraBaseline>
+  </Decisions>
+
+  <Patterns>
+    <Pattern name="Strangler Fig" rationale="Incremental migration from on-prem monolith to cloud services; allows parallel operation and gradual cutover with minimal risk"/>
+    <Pattern name="API Gateway" rationale="Centralized entry point for REST APIs; handles auth, throttling, and routing to Lambda compute"/>
+    <Pattern name="Event-Driven Architecture" rationale="Decouple services via EventBridge for async workflows; enables scalability and resilience"/>
+    <Pattern name="CQRS" rationale="Separate read-heavy queries (DynamoDB) from transactional writes (Aurora); optimize for performance and cost"/>
+    <Pattern name="Outbox Pattern" rationale="Ensure reliable event publishing from Aurora to EventBridge; prevent dual-write inconsistencies during migration"/>
+    <Pattern name="Circuit Breaker" rationale="Protect downstream services and legacy on-prem dependencies during hybrid operation; fail gracefully"/>
+    <Pattern name="Blue-Green Deployment" rationale="Zero-downtime cutover; maintain rollback capability to on-prem during migration phases"/>
+    <Pattern name="Change Data Capture (CDC)" rationale="Replicate data from on-prem SQL to Aurora via AWS DMS; maintain consistency during dual-write phase"/>
+  </Patterns>
+
+  <NonFunctionals>
+    <Availability target="99.9%"/>
+    <Latency p95_ms="300"/>
+    <Throughput rps="150"/>
+    <Security notes="IAM least-privilege roles; KMS encryption at rest; TLS 1.2+ in transit; Secrets Manager for credentials; GuardDuty and Security Hub enabled; MEC compliance validated pre-migration"/>
+    <Compliance notes="MEC alignment mandatory; CloudTrail audit logging; data classification enforced; PII/sensitive data encrypted; backup retention per policy"/>
+    <Observability notes="CloudWatch Logs with structured JSON; X-Ray tracing via OTEL; CloudWatch Metrics for Lambda, API Gateway, DynamoDB, Aurora; OpenSearch for log analytics; alarms for SLA breaches"/>
+    <CostGuardrails notes="Serverless-first to cap idle costs; DynamoDB on-demand mode; Aurora Serverless v2 auto-scaling; S3 Intelligent-Tiering and Glacier lifecycle; Lambda reserved concurrency limits; budget alerts via AWS Budgets"/>
+  </NonFunctionals>
+
+  <Services>
+    <Service name="ApplicationCore" domain="core-business-logic">
+      <APIs>
+        <API name="CoreAPI" protocol="REST" auth="IAM" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="aurora-serverless-v2" purpose="transactional relational data; ACID guarantees for business entities"/>
+        <Store type="dynamodb" purpose="high-write key-value store for session state and read-optimized views"/>
+        <Store type="s3" purpose="object storage for files, logs, and event archives"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="topic" name="CoreEvents" purpose="publish domain events for downstream consumers"/>
+      </QueuesTopics>
+    </Service>
+    <Service name="DataMigration" domain="migration-orchestration">
+      <APIs>
+        <API name="MigrationControlAPI" protocol="REST" auth="IAM" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="s3" purpose="staging area for DMS replication and validation artifacts"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="queue" name="MigrationTaskQueue" purpose="coordinate DMS tasks and validation workflows"/>
+      </QueuesTopics>
+    </Service>
+    <Service name="BatchProcessing" domain="batch-workflows">
+      <APIs>
+        <API name="BatchTriggerAPI" protocol="REST" auth="IAM" sync_or_async="async"/>
+      </APIs>
+      <DataStores>
+        <Store type="s3" purpose="input/output for batch jobs; file transfers from legacy systems"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="queue" name="BatchJobQueue" purpose="decouple batch job submission from execution; enable retry and DLQ"/>
+      </QueuesTopics>
+    </Service>
+    <Service name="Monitoring" domain="observability">
+      <APIs>
+        <API name="MetricsAPI" protocol="REST" auth="IAM" sync_or_async="sync"/>
+      </APIs>
+      <DataStores>
+        <Store type="s3" purpose="long-term storage for CloudWatch Logs exports and compliance archives"/>
+      </DataStores>
+      <QueuesTopics>
+        <Channel type="topic" name="AlertEvents" purpose="publish monitoring alerts to SNS for incident response"/>
+      </QueuesTopics>
+    </Service>
+  </Services>
+
+  <Constraints>
+    <Must>All infrastructure provisioned via Terraform with modular, reusable code</Must>
+    <Must>Python 3.11 runtime for all Lambda functions and automation scripts</Must>
+    <Must>Encryption at rest (KMS) and in transit (TLS 1.2+) for all data</Must>
+    <Must>IAM roles with least-privilege policies; no long-lived credentials</Must>
+    <Must>MEC compliance validated before migration cutover</Must>
+    <Must>Multi-AZ deployment for Aurora and critical Lambda functions</Must>
+    <Must>CloudTrail enabled for audit logging across all regions</Must>
+    <Must>Backup and DR strategy with documented RPO/RTO within business limits</Must>
+    <Should>Prefer serverless services to minimize operational overhead and idle costs</Should>
+    <Should>Implement CI/CD pipelines for Terraform and Python code with automated testing</Should>
+    <Should>Use AWS DMS for database migration with CDC to minimize downtime</Should>
+    <Should>Tag all resources with cost center, environment, and application identifiers</Should>
+    <Should>Enable auto-scaling for Aurora Serverless v2 and DynamoDB based on load</Should>
+    <MustNot>Store secrets or credentials in code or environment variables; use Secrets Manager</MustNot>
+    <MustNot>Deploy without CloudWatch alarms for critical SLA metrics</MustNot>
+    <MustNot>Exceed budget guardrails; enforce Lambda concurrency limits and DynamoDB capacity modes</MustNot>
+  </Constraints>
+
+  <CloudMapping provider="AWS">
+    <Compute>Lambda functions (Python 3.11) for application logic, API handlers, batch processing, and automation; Step Functions for orchestration of complex workflows; Fargate for containerized workloads if refactoring phase requires ECS/EKS</Compute>
+    <Networking>VPC with private and public subnets across 3 AZs; Application Load Balancer for HTTP/HTTPS traffic; NAT Gateway for outbound internet access from private subnets; VPC Endpoints for S3, DynamoDB, Secrets Manager; Transit Gateway or VPN for hybrid connectivity to on-prem during migration; Route 53 for DNS with health checks and failover</Networking>
+    <Data>Aurora Serverless v2 (PostgreSQL-compatible) for relational transactional data with multi-AZ; DynamoDB (on-demand) for high-write key-value and session state; S3 with Intelligent-Tiering for objects, logs, and event archives; S3 Glacier for long-term backup retention; AWS DMS for database migration with CDC from on-prem SQL to Aurora</Data>
+    <Messaging>EventBridge for event-driven async integration and domain event publishing; SQS standard queues for work distribution and decoupling with DLQ for failed messages; SNS for alert notifications and fan-out patterns</Messaging>
+    <Identity>IAM roles and policies for service-to-service auth with least privilege; AWS SSO integration for human access; Secrets Manager for database credentials and API keys; KMS customer-managed keys for encryption; Cognito if user authentication required for external APIs; GuardDuty for threat detection; Security Hub for compliance posture</Identity>
+  </CloudMapping>
+
+  <Risks>
+    <Risk item="Schema drift between on-prem SQL and Aurora during migration" mitigation="Use AWS DMS Schema Conversion Tool; validate schema pre-cutover; implement automated schema diff checks in CI/CD"/>
+    <Risk item="Performance degradation post-migration due to network latency or under-provisioned resources" mitigation="Conduct load testing in pre-prod; enable Aurora auto-scaling; configure Lambda reserved concurrency; monitor CloudWatch metrics and set alarms"/>
+    <Risk item="Dual-write inconsistencies during hybrid operation" mitigation="Implement Outbox pattern with CDC via DMS; use idempotent event handlers; validate data consistency with reconciliation jobs"/>
+    <Risk item="Cost overruns from unoptimized serverless usage" mitigation="Apply AWS Budgets with alerts; use DynamoDB on-demand mode; set Lambda timeout and memory limits; implement S3 lifecycle policies; right-size Aurora capacity units"/>
+    <Risk item="Security gaps during migration exposing sensitive data" mitigation="Enforce MEC compliance checks; enable GuardDuty and Security Hub; encrypt all data in transit and at rest; conduct security review before cutover"/>
+    <Risk item="Rollback complexity if cutover fails" mitigation="Implement blue-green deployment with DNS failover; maintain on-prem environment operational during hypercare; document rollback runbook with tested procedures"/>
+    <Risk item="Vendor licensing issues for cloud deployment" mitigation="Review licensing agreements pre-migration; engage vendors for cloud-compatible licenses; consider open-source alternatives where feasible"/>
+    <Risk item="Insufficient observability leading to blind spots post-migration" mitigation="Implement structured logging with CloudWatch Logs; enable X-Ray tracing; create CloudWatch dashboards; set up alarms for SLA breaches; integrate with OpenSearch for analytics"/>
+    <Risk item="Dependency on legacy on-prem systems during strangler fig migration" mitigation="Implement circuit breaker pattern for on-prem calls; establish hybrid connectivity via VPN/Transit Gateway; monitor latency and availability; plan phased decommissioning"/>
+  </Risks>
+</ArchitectureSpec>
+```

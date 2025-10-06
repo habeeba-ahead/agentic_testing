@@ -1,0 +1,14 @@
+Using only the BRD, enumerate modernization domains with emphasis on cross-domain risk and dependencies.
+
+For each domain:
+name, scope, blocking_risks[], dependencies[], workstreams[minimal viable], priority, evidence[{locator,excerpt}].
+
+Also produce cross_domain_view: { critical_path[], notable_gaps[], guardrail_conflicts[] }.
+
+[INPUT: BRD]
+{BRD_TEXT}
+
+[SCHEMA]
+{SCHEMA}
+
+Return JSON only. Cite BRD locations for every risk.

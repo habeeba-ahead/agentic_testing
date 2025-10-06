@@ -1,0 +1,58 @@
+```json
+{
+  "ranking": [
+    {
+      "prompt": "C_prompt",
+      "score": 92,
+      "reasons": "Comprehensive 7-domain coverage (incl. Integration), strong evidence fidelity with precise BRD locators, actionable workstreams with quantified metrics, clear prioritization logic, excellent structure; minor gaps in RPO/RTO quantification noted."
+    },
+    {
+      "prompt": "I_prompt",
+      "score": 90,
+      "reasons": "Excellent 8-domain coverage (adds Governance), strong evidence citations, actionable workstreams with specific metrics, clear critical path; slightly verbose but well-structured; minor hallucination risk with 'Java SOAP' not in BRD."
+    },
+    {
+      "prompt": "D_prompt",
+      "score": 88,
+      "reasons": "Strong 8-domain coverage (adds Governance), good evidence fidelity, actionable workstreams with clear metrics, solid prioritization; slightly less concise than top candidates; well-aligned with BRD pain points."
+    },
+    {
+      "prompt": "F_prompt",
+      "score": 87,
+      "reasons": "Comprehensive 8-domain coverage (adds Governance), good evidence citations, actionable workstreams, clear prioritization; slightly generic in some success metrics; strong alignment with BRD objectives."
+    },
+    {
+      "prompt": "B_prompt",
+      "score": 85,
+      "reasons": "Solid 5-domain coverage, strong evidence fidelity, actionable workstreams with clear metrics, good prioritization logic; missing Integration/Governance domains reduces coverage score; concise and well-structured."
+    },
+    {
+      "prompt": "E_prompt",
+      "score": 84,
+      "reasons": "Good 7-domain coverage (adds FinOps), strong evidence citations, actionable workstreams, clear prioritization; slightly less detailed in success metrics; well-aligned with BRD drivers."
+    },
+    {
+      "prompt": "A_prompt",
+      "score": 82,
+      "reasons": "Good 6-domain coverage (adds FinOps), strong evidence fidelity, actionable workstreams, clear prioritization; missing Integration/Governance reduces coverage; concise and well-structured."
+    },
+    {
+      "prompt": "G_prompt",
+      "score": 80,
+      "reasons": "Solid 7-domain coverage (adds Governance), good evidence citations, actionable workstreams; slightly less detailed in business alignment; clear structure but some redundancy in risk descriptions."
+    },
+    {
+      "prompt": "H_prompt",
+      "score": 78,
+      "reasons": "Good 5-domain coverage, strong evidence fidelity, actionable workstreams with quantified metrics; missing Integration/FinOps/Governance reduces coverage; concise but less comprehensive than top candidates."
+    },
+    {
+      "prompt": "JUDGE_prompt_quality",
+      "score": 75,
+      "reasons": "Unique 5-domain structure with cross-cutting themes, strong evidence fidelity, good business alignment; less actionable workstreams (higher-level), different schema reduces direct comparability; valuable alternative perspective."
+    }
+  ],
+  "winner": "C_prompt",
+  "notes": "C_prompt edges out I_prompt with slightly better conciseness and no hallucination risk (I_prompt introduces 'Java SOAP' not in BRD). Top 4 candidates (C, I, D, F) all demonstrate excellent coverage (7-8 domains), strong evidence fidelity, and actionable workstreams. C_prompt's Integration domain and precise BRD locators give it the edge. B_prompt and A_prompt score well but lack Integration/Governance domains. JUDGE_prompt_quality offers a valid alternative structure but is less actionable for immediate implementation planning."
+}
+```

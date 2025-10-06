@@ -1,0 +1,407 @@
+```json
+BEGIN_JSON
+{
+  "system": "Application Modernization & Migration to AWS (Terraform + Python)",
+  "summary": "Lift-and-shift migration of on-premises x86 application to AWS using Terraform IaC and Python automation. Focus on MEC compliance, security hardening, observability integration, and phased refactoring to containers. Critical dependencies include database migration via DMS, IAM/encryption enforcement, and CI/CD pipeline establishment for infrastructure and application code.",
+  "domains": [
+    {
+      "name": "Application",
+      "scope": "Migrate application workloads from on-prem to AWS EC2 (lift-and-shift), then refactor to ECS/EKS containers. Python automation for workflows, Lambda functions, Glue jobs, and Step Functions orchestration.",
+      "drivers": [
+        "Legacy on-prem infrastructure end-of-life",
+        "Need for elastic scalability and cloud-native automation"
+      ],
+      "proposed_workstreams": [
+        {
+          "title": "Lift-and-Shift to EC2",
+          "deliverables": [
+            "EC2 instances provisioned via Terraform",
+            "Application deployed and validated on AWS"
+          ],
+          "success_metrics": [
+            "Application functional parity with on-prem baseline",
+            "Zero critical post-cutover issues"
+          ]
+        },
+        {
+          "title": "Containerization Refactor",
+          "deliverables": [
+            "Dockerized application images",
+            "ECS/EKS deployment with auto-scaling"
+          ],
+          "success_metrics": [
+            "Container orchestration operational",
+            "Reduced deployment time by 50%"
+          ]
+        }
+      ],
+      "dependencies": [
+        "Infrastructure",
+        "Data",
+        "Security & Compliance"
+      ],
+      "priority": "High",
+      "confidence": 0.85,
+      "risks": [
+        "Performance degradation during migration",
+        "Application compatibility issues with AWS services"
+      ],
+      "evidence": [
+        {
+          "locator": "Section 4: Target State Architecture",
+          "excerpt": "Compute: AWS EC2 for lift-and-shift workloads; ECS/EKS for containerized future state"
+        },
+        {
+          "locator": "Section 6: Functional Requirements",
+          "excerpt": "Implement application automation using Python"
+        }
+      ]
+    },
+    {
+      "name": "Data",
+      "scope": "Migrate SQL databases to Amazon RDS using AWS DMS. Implement S3 for object storage, S3 Glacier for backups. Ensure data encryption at rest and in transit per MEC requirements.",
+      "drivers": [
+        "Database modernization and managed service adoption",
+        "Compliance with encryption and backup requirements"
+      ],
+      "proposed_workstreams": [
+        {
+          "title": "Database Migration via DMS",
+          "deliverables": [
+            "DMS replication instances configured",
+            "Schema validation and cutover completed"
+          ],
+          "success_metrics": [
+            "Zero data loss during migration",
+            "RPO/RTO targets met"
+          ]
+        },
+        {
+          "title": "Storage Architecture Implementation",
+          "deliverables": [
+            "S3 buckets with lifecycle policies",
+            "Glacier backup strategy operational"
+          ],
+          "success_metrics": [
+            "Backup restore tested successfully",
+            "Storage costs optimized via lifecycle rules"
+          ]
+        }
+      ],
+      "dependencies": [
+        "Infrastructure",
+        "Security & Compliance"
+      ],
+      "priority": "High",
+      "confidence": 0.8,
+      "risks": [
+        "Schema drift during DMS migration",
+        "Data integrity issues post-migration"
+      ],
+      "evidence": [
+        {
+          "locator": "Section 4: Target State Architecture",
+          "excerpt": "Storage: Amazon S3 for objects; Amazon RDS for relational DB; backup to S3 Glacier"
+        },
+        {
+          "locator": "Section 8: Migration & Cutover Plan",
+          "excerpt": "Data migration via AWS DMS"
+        }
+      ]
+    },
+    {
+      "name": "Infrastructure",
+      "scope": "Provision all AWS infrastructure using Terraform modules. Establish VPC with private/public subnets, ALB/NLB load balancing, multi-AZ high availability, and auto-scaling groups.",
+      "drivers": [
+        "Infrastructure-as-Code standardization",
+        "Elastic scalability and high availability requirements"
+      ],
+      "proposed_workstreams": [
+        {
+          "title": "Terraform IaC Implementation",
+          "deliverables": [
+            "Modular Terraform codebase for all resources",
+            "CI/CD pipeline for Terraform deployments"
+          ],
+          "success_metrics": [
+            "100% infrastructure provisioned via code",
+            "Deployment time reduced to under 30 minutes"
+          ]
+        },
+        {
+          "title": "Network and HA Architecture",
+          "deliverables": [
+            "VPC with multi-AZ subnets configured",
+            "Load balancers and auto-scaling operational"
+          ],
+          "success_metrics": [
+            "99.9% uptime SLA achieved",
+            "Failover tested successfully"
+          ]
+        }
+      ],
+      "dependencies": [
+        "Security & Compliance"
+      ],
+      "priority": "High",
+      "confidence": 0.9,
+      "risks": [
+        "Terraform state management conflicts",
+        "Network misconfiguration causing downtime"
+      ],
+      "evidence": [
+        {
+          "locator": "Section 4: Target State Architecture",
+          "excerpt": "Networking: VPC with private/public subnets; ALB/NLB load balancing"
+        },
+        {
+          "locator": "Section 6: Functional Requirements",
+          "excerpt": "Provision infrastructure using Terraform (modular, reusable code)"
+        }
+      ]
+    },
+    {
+      "name": "Security & Compliance",
+      "scope": "Enforce IAM least privilege, KMS encryption at rest/transit, MEC compliance validation, AWS SSO integration, CloudTrail auditing, and GuardDuty threat detection.",
+      "drivers": [
+        "MEC compliance requirements",
+        "Data classification and encryption mandates"
+      ],
+      "proposed_workstreams": [
+        {
+          "title": "MEC Compliance Remediation",
+          "deliverables": [
+            "MEC gap analysis and remediation plan",
+            "All 32 MEC criteria validated pre-migration"
+          ],
+          "success_metrics": [
+            "100% MEC compliance achieved",
+            "Security Hub score above 90"
+          ]
+        },
+        {
+          "title": "IAM and Encryption Hardening",
+          "deliverables": [
+            "IAM roles with least privilege configured",
+            "KMS encryption enabled for all data stores"
+          ],
+          "success_metrics": [
+            "Zero IAM policy violations",
+            "All data encrypted per policy"
+          ]
+        }
+      ],
+      "dependencies": [],
+      "priority": "High",
+      "confidence": 0.95,
+      "risks": [
+        "MEC gaps blocking migration",
+        "IAM misconfigurations causing access issues"
+      ],
+      "evidence": [
+        {
+          "locator": "Section 5: Minimum Entry Criteria",
+          "excerpt": "Applications must remediate any MEC gaps before migration"
+        },
+        {
+          "locator": "Section 7: Non-Functional Requirements",
+          "excerpt": "Security: IAM least privilege, encryption, MEC alignment"
+        }
+      ]
+    },
+    {
+      "name": "Operations/Platform",
+      "scope": "Implement AWS-native observability with CloudWatch logs/metrics, X-Ray tracing, OpenSearch log analytics. Establish backup/restore procedures, DR strategy, and hypercare support post-cutover.",
+      "drivers": [
+        "Limited on-prem monitoring automation",
+        "Need for cloud-native observability and operational excellence"
+      ],
+      "proposed_workstreams": [
+        {
+          "title": "Observability Stack Deployment",
+          "deliverables": [
+            "CloudWatch dashboards and alarms configured",
+            "X-Ray and OpenSearch integrated"
+          ],
+          "success_metrics": [
+            "Mean time to detect (MTTD) under 5 minutes",
+            "100% application logs centralized"
+          ]
+        },
+        {
+          "title": "Backup and DR Implementation",
+          "deliverables": [
+            "Automated backup schedules to S3/Glacier",
+            "DR runbook and failback tested"
+          ],
+          "success_metrics": [
+            "RPO under 1 hour, RTO under 4 hours",
+            "Successful DR drill completed"
+          ]
+        }
+      ],
+      "dependencies": [
+        "Infrastructure",
+        "Application"
+      ],
+      "priority": "High",
+      "confidence": 0.85,
+      "risks": [
+        "Incomplete observability causing blind spots",
+        "DR failover failures during testing"
+      ],
+      "evidence": [
+        {
+          "locator": "Section 4: Target State Architecture",
+          "excerpt": "Observability: CloudWatch logs/metrics, X-Ray tracing, OpenSearch for log analytics"
+        },
+        {
+          "locator": "Section 6: Functional Requirements",
+          "excerpt": "Provide backup, restore, and disaster recovery within RPO/RTO limits"
+        }
+      ]
+    },
+    {
+      "name": "FinOps",
+      "scope": "Implement cost optimization through right-sizing compute, S3 lifecycle management, resource tagging, AWS Budgets, and Cost Explorer monitoring. Prevent cost overruns via guardrails.",
+      "drivers": [
+        "Cloud cost management and optimization",
+        "Budget accountability and transparency"
+      ],
+      "proposed_workstreams": [
+        {
+          "title": "Cost Optimization Framework",
+          "deliverables": [
+            "Right-sized EC2 instances and RDS",
+            "S3 lifecycle policies reducing storage costs"
+          ],
+          "success_metrics": [
+            "20% cost reduction vs. initial estimates",
+            "Zero untagged resources"
+          ]
+        }
+      ],
+      "dependencies": [
+        "Infrastructure"
+      ],
+      "priority": "Medium",
+      "confidence": 0.75,
+      "risks": [
+        "Cost overruns due to over-provisioning",
+        "Lack of tagging discipline"
+      ],
+      "evidence": [
+        {
+          "locator": "Section 7: Non-Functional Requirements",
+          "excerpt": "Cost Efficiency: Right-sized compute, S3 lifecycle management, tagging"
+        },
+        {
+          "locator": "Section 9: Risks & Mitigation",
+          "excerpt": "Cost overruns: Apply budgets, tagging, lifecycle rules"
+        }
+      ]
+    },
+    {
+      "name": "Governance",
+      "scope": "Establish CI/CD pipelines for Terraform and Python code. Implement code review processes, version control, and change management aligned with migration phases.",
+      "drivers": [
+        "Need for automated deployment pipelines",
+        "Code quality and change control requirements"
+      ],
+      "proposed_workstreams": [
+        {
+          "title": "CI/CD Pipeline Establishment",
+          "deliverables": [
+            "Terraform and Python CI/CD pipelines operational",
+            "Automated testing and validation gates"
+          ],
+          "success_metrics": [
+            "100% deployments via pipeline",
+            "Zero manual infrastructure changes"
+          ]
+        }
+      ],
+      "dependencies": [
+        "Infrastructure",
+        "Application"
+      ],
+      "priority": "Medium",
+      "confidence": 0.8,
+      "risks": [
+        "Pipeline failures blocking deployments",
+        "Insufficient testing causing production issues"
+      ],
+      "evidence": [
+        {
+          "locator": "Section 6: Functional Requirements",
+          "excerpt": "Establish CI/CD pipelines for Terraform and Python automation"
+        }
+      ]
+    }
+  ],
+  "cross_domain_view": {
+    "critical_path": [
+      "Security & Compliance",
+      "Infrastructure",
+      "Data",
+      "Application",
+      "Operations/Platform"
+    ],
+    "notable_gaps": [
+      "Application name and business area not confirmed",
+      "Specific MEC gap analysis results not provided",
+      "Vendor licensing cloud migration strategy undefined",
+      "Detailed interface specifications missing",
+      "RPO/RTO specific values not quantified"
+    ],
+    "guardrail_conflicts": [
+      "BRD mentions 'weekend maintenance window' but does not specify approval process or rollback criteria",
+      "MEC compliance required pre-migration but no timeline for remediation provided",
+      "Failback option mentioned but on-prem infrastructure retention strategy unclear"
+    ]
+  },
+  "recommendations": [
+    {
+      "horizon": "now",
+      "action": "Conduct MEC gap analysis workshop to identify and prioritize remediation items blocking migration",
+      "owner": "Security & Compliance Team"
+    },
+    {
+      "horizon": "now",
+      "action": "Confirm application name, business area, and dependencies with client stakeholders",
+      "owner": "Project Manager"
+    },
+    {
+      "horizon": "now",
+      "action": "Establish Terraform module repository structure and CI/CD pipeline skeleton",
+      "owner": "Infrastructure Team"
+    },
+    {
+      "horizon": "next",
+      "action": "Design and validate DMS replication strategy with schema drift testing in non-prod",
+      "owner": "Data Engineering Team"
+    },
+    {
+      "horizon": "next",
+      "action": "Deploy observability stack (CloudWatch, X-Ray, OpenSearch) in pilot environment",
+      "owner": "Operations Team"
+    },
+    {
+      "horizon": "next",
+      "action": "Define and document RPO/RTO targets with business stakeholders for DR planning",
+      "owner": "Business Continuity Team"
+    },
+    {
+      "horizon": "later",
+      "action": "Execute containerization refactor to ECS/EKS post-successful lift-and-shift validation",
+      "owner": "Application Development Team"
+    },
+    {
+      "horizon": "later",
+      "action": "Implement FinOps cost optimization reviews quarterly with automated rightsizing recommendations",
+      "owner": "FinOps Team"
+    }
+  ]
+}
+END_JSON
+```

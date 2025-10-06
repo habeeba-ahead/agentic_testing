@@ -1,0 +1,214 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Stitch & CI Agent Output",
+  "type": "object",
+  "required": [
+    "bundle_manifest",
+    "src",
+    "infra",
+    "ci",
+    "ops",
+    "readme.md",
+    "changelog.md",
+    "validation"
+  ],
+  "properties": {
+    "bundle_manifest": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["path", "purpose"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "purpose": { "type": "string", "minLength": 1 },
+          "note": { "type": "string" },
+          "generated_bytes": { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "src": {
+      "type": "object",
+      "required": ["files"],
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "content"],
+            "properties": {
+              "path": {
+                "type": "string",
+                "pattern": "^src\\/.+\\.py$"
+              },
+              "content": { "type": "string", "minLength": 1 }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "infra": {
+      "type": "object",
+      "required": ["terraform"],
+      "properties": {
+        "terraform": {
+          "type": "object",
+          "required": ["files"],
+          "properties": {
+            "files": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["path", "content"],
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "pattern": "^infra\\/terraform\\/.+\\.tf$"
+                  },
+                  "content": { "type": "string", "minLength": 1 }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "ci": {
+      "type": "object",
+      "required": ["workflows"],
+      "properties": {
+        "workflows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "content"],
+            "properties": {
+              "path": {
+                "type": "string",
+                "pattern": "^\\.github\\/workflows\\/.+\\.ya?ml$"
+              },
+              "content": { "type": "string", "minLength": 1 }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "ops": {
+      "type": "object",
+      "required": ["env_vars", "iam_policies", "alarms"],
+      "properties": {
+        "env_vars": {
+          "description": "Map of service or function name to env var key/value descriptions (not secrets).",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          }
+        },
+        "iam_policies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "policy_json"],
+            "properties": {
+              "name": { "type": "string" },
+              "policy_json": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "alarms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "description"],
+            "properties": {
+              "name": { "type": "string" },
+              "description": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "readme.md": { "type": "string", "minLength": 1 },
+    "changelog.md": { "type": "string", "minLength": 1 },
+    "validation": {
+      "type": "object",
+      "required": ["checks", "summary"],
+      "properties": {
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "status"],
+            "properties": {
+              "name": { "type": "string" },
+              "status": { "type": "string", "enum": ["pass", "warn", "fail"] },
+              "details": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "summary": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "bundle_manifest": [
+        { "path": "infra/terraform/app.tf", "purpose": "Overlay wiring API→Lambda→DDB/EventBridge" },
+        { "path": "src/orders/glue.py", "purpose": "Adapter for handler signature" }
+      ],
+      "src": {
+        "files": [
+          { "path": "src/orders/glue.py", "content": "# python code ..." }
+        ]
+      },
+      "infra": {
+        "terraform": {
+          "files": [
+            { "path": "infra/terraform/app.tf", "content": "# terraform ..." }
+          ]
+        }
+      },
+      "ci": {
+        "workflows": [
+          { "path": ".github/workflows/ci.yml", "content": "name: CI\non: ..." }
+        ]
+      },
+      "ops": {
+        "env_vars": {
+          "orders": { "ORDERS_TABLE": "DynamoDB table name", "EVENT_BUS_NAME": "EventBridge bus name" }
+        },
+        "iam_policies": [
+          { "name": "orders-ddb-access", "policy_json": "{...}" }
+        ],
+        "alarms": [
+          { "name": "OrdersErrorsHigh", "description": "Alarm on Lambda error rate" }
+        ]
+      },
+      "readme.md": "# How to run ...",
+      "changelog.md": "- Initial stitch\n",
+      "validation": {
+        "checks": [
+          { "name": "terraform_validate", "status": "pass" },
+          { "name": "handlers_mapped", "status": "pass" }
+        ],
+        "summary": "All baseline checks passed."
+      }
+    }
+  ]
+}

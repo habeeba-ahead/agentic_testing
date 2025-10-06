@@ -1,0 +1,16 @@
+From the BRD only, map business requirements → modernization domains.
+
+Steps (internally): scan capabilities/pain points → tag to domains → rank value vs effort.
+
+[SCHEMA]
+{SCHEMA}
+
+[INPUT: BRD]
+{BRD_TEXT}
+
+Output JSON with fields:
+system, summary (≤5 lines),
+domains[{name, drivers[], workstreams[], priority, evidence[{locator,excerpt}]}],
+recommendations[now/next/later].
+
+Be concise. No narrative outside JSON.

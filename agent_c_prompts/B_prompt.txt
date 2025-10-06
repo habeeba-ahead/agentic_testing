@@ -1,0 +1,20 @@
+You read only a BRD. Identify impacted modernization domains and justify them with direct BRD evidence.
+
+[SCHEMA]
+{SCHEMA}
+
+[INPUT: BRD]
+{BRD_TEXT}
+
+For each domain provide:
+- name
+- rationale (2–3 sentences tied to BRD wording)
+- drivers[]
+- proposed_workstreams[] (title, value_metric)
+- risks[]
+- dependencies[]
+- priority
+- confidence ∈ [0.0,1.0]
+- evidence[{ locator:"<page/section>", excerpt:"<≤25 words>"}]
+
+Output compact JSON. No speculation without evidence; if uncertain, lower confidence and state assumptions explicitly.

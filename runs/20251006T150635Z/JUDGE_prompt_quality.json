@@ -1,0 +1,13 @@
+```json
+{
+  "ranking": [
+    {
+      "prompt": "Stitch & CI Agent Output",
+      "score": 0,
+      "reasons": "No candidate bundles provided for evaluation"
+    }
+  ],
+  "winner": "N/A",
+  "notes": "No candidates array found in input. Expected JSON with 'candidates' key containing array of {prompt_stem, agent_output_json} objects."
+}
+```

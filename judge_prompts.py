@@ -6,15 +6,67 @@ from dotenv import load_dotenv
 
 ROOT = pathlib.Path(__file__).resolve().parent
 RUNS_DIR = ROOT / "runs"
-PROMPT_TMPL = (ROOT / "prompts" / "JUDGE_prompt_quality.txt").read_text(encoding="utf-8")
-BRD = (ROOT / "data" / "brd_summary.md").read_text(encoding="utf-8")
-GUARD = (ROOT / "data" / "guardrails.md").read_text(encoding="utf-8")
+PROMPT_TMPL = (ROOT / "agent_e_prompts" / "JUDGE_prompt_quality.txt").read_text(encoding="utf-8")
+SCHEMA_PATH = ROOT / "final_schema.json"
+BRD_PATH    = ROOT / "resources" / "brd_summary.md"
+GUARD_PATH  = ROOT / "resources" / "guardrails.md"
+RULES_PATH  = ROOT / "resources" / "architecture_rules.xml"
+
+# NEW: generic Terraform templates (patterns agent outputs) and translated Python (code build agent)
+TF_ROOT   = ROOT / "infra" / "patterns" / "templates"
+PY_ROOT   = ROOT / "src"
 
 load_dotenv()
 
+# --- optional reads (gracefully skip if missing) ---
+def safe_read(p: pathlib.Path, encoding="utf-8") -> str:
+    try:
+        return p.read_text(encoding=encoding)
+    except Exception:
+        return ""
+
+SCHEMA = safe_read(SCHEMA_PATH)
+BRD    = safe_read(BRD_PATH)
+GUARD  = safe_read(GUARD_PATH)
+RULES  = safe_read(RULES_PATH)
+
+# --- gather code assets ---
+def gather_files_text(root: pathlib.Path, globs: list[str], max_bytes: int | None = None) -> str:
+    """
+    Concatenate files matched by globs into a single string with file headers.
+    If max_bytes is set, truncate the total aggregate to this size with a clear notice.
+    """
+    if not root.exists():
+        return ""
+    parts = []
+    for pattern in globs:
+        for f in sorted(root.rglob(pattern)):
+            try:
+                txt = f.read_text(encoding="utf-8")
+            except Exception:
+                continue
+            parts.append(f"\n===== FILE: {f.relative_to(ROOT)} =====\n{txt}\n")
+    blob = "".join(parts)
+    if max_bytes is not None and len(blob.encode("utf-8")) > max_bytes:
+        # truncate on a UTF-8 boundary
+        truncated = blob.encode("utf-8")[:max_bytes]
+        try:
+            blob = truncated.decode("utf-8")
+        except UnicodeDecodeError:
+            blob = truncated.decode("utf-8", errors="ignore")
+        blob += "\n\n===== NOTE =====\n[TRUNCATED to fit token/size budget]\n"
+    return blob
+
+# Tune these budgets as needed (roughly a couple thousand tokens each)
+MAX_TF_BYTES = 350_000
+MAX_PY_BYTES = 350_000
+
+TF_TEMPLATES = gather_files_text(TF_ROOT, ["*.tf"], max_bytes=MAX_TF_BYTES)
+PY_SOURCES   = gather_files_text(PY_ROOT, ["*.py"], max_bytes=MAX_PY_BYTES)
+
 # pick latest run folder
 latest = sorted((d for d in RUNS_DIR.iterdir() if d.is_dir()), reverse=True)[0]
-xml_files = sorted([p for p in latest.glob("*.xml")])
+xml_files = sorted([p for p in latest.glob("*.json")])
 
 if not xml_files:
     raise SystemExit(f"No XML candidates found in {latest}")
@@ -85,8 +137,12 @@ for f in xml_files:
 
 filled = (
     PROMPT_TMPL
-        .replace("{{BRD_TEXT}}", BRD)
-        .replace("{{GUARDRAILS_TEXT}}", GUARD)
+         .replace("{RULES_TEXT}", RULES or "")
+         .replace("{SCHEMA}", SCHEMA or "")
+         .replace("{GUARDRAILS_TEXT}", GUARD or "")
+         .replace("{BRD_TEXT}", BRD or "")
+         .replace("{TF_TEMPLATES}", TF_TEMPLATES or "")
+         .replace("{PY_SOURCES}", PY_SOURCES or "")
     + "\n" + "\n".join(blocks)
 )
 
@@ -99,7 +155,7 @@ JUDGE_MODEL = os.environ.get("ANTHROPIC_JUDGE_MODEL", "claude-sonnet-4-5-2025092
 
 resp = client.messages.create(
     model=JUDGE_MODEL,
-    max_tokens=2000,
+    max_tokens=5000,
     temperature=0,
     system="Return STRICT JSON only. No Markdown, no commentary.",
     messages=[{"role": "user", "content": [{"type": "text", "text": filled}]}],

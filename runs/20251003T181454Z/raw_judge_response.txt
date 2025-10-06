@@ -1,0 +1,58 @@
+```json
+{
+  "ranking": [
+    {
+      "prompt": "B_prompt",
+      "score": 92,
+      "reasons": "Comprehensive 8-domain coverage with Integration domain, strong MEC/evidence fidelity, actionable workstreams, clear prioritization logic, minimal gaps noted."
+    },
+    {
+      "prompt": "C_prompt",
+      "score": 91,
+      "reasons": "8 domains including Integration and Governance, excellent evidence citations, quantified success metrics, detailed gap analysis, strong business alignment."
+    },
+    {
+      "prompt": "I_prompt",
+      "score": 89,
+      "reasons": "8 domains with detailed Integration workstreams, strong MEC focus, quantified metrics, but slightly verbose and some redundancy in evidence excerpts."
+    },
+    {
+      "prompt": "H_prompt",
+      "score": 88,
+      "reasons": "8 domains with quantified metrics (p95 latency, MTTD), strong technical depth, but some success metrics lack BRD grounding (e.g., container startup <30s)."
+    },
+    {
+      "prompt": "F_prompt",
+      "score": 86,
+      "reasons": "8 domains with Governance, good MEC compliance focus, clear workstreams, but less specificity in success metrics and slightly generic recommendations."
+    },
+    {
+      "prompt": "G_prompt",
+      "score": 85,
+      "reasons": "8 domains with Integration and Governance, strong evidence fidelity, but some workstreams lack concrete deliverables and prioritization logic less explicit."
+    },
+    {
+      "prompt": "A_prompt",
+      "score": 83,
+      "reasons": "6 domains (missing Integration and Governance), strong technical detail, good evidence citations, but lower coverage and less explicit prioritization rationale."
+    },
+    {
+      "prompt": "D_prompt",
+      "score": 81,
+      "reasons": "8 domains but Integration workstream underdeveloped, good MEC focus, clear risks, but some success metrics lack quantification and evidence less granular."
+    },
+    {
+      "prompt": "E_prompt",
+      "score": 78,
+      "reasons": "6 domains (missing Integration and Governance), concise but less comprehensive, some workstreams lack detail, fewer evidence citations, gaps less explicit."
+    },
+    {
+      "prompt": "JUDGE_prompt_quality",
+      "score": 72,
+      "reasons": "5 domains only, different schema (not matching required JSON structure), good cross-cutting themes but lower domain coverage, less actionable workstreams."
+    }
+  ],
+  "winner": "B_prompt",
+  "notes": "B_prompt edges out C_prompt with slightly better prioritization logic and clearer dependency mapping. Top 4 candidates (B, C, I, H) all deliver 8-domain coverage with strong evidence fidelity and actionable workstreams. A_prompt and E_prompt lose points for missing Integration/Governance domains. JUDGE_prompt_quality uses a different schema and lower domain granularity, scoring lowest despite good thematic analysis."
+}
+```

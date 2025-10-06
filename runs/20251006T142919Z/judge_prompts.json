@@ -1,0 +1,26 @@
+{
+  "ranking": [
+    {
+      "prompt": "C_prompt",
+      "score": 78,
+      "reasons": "Most complete bundle with proper backend config, comprehensive IAM, structured tests, and better Terraform practices (fileexists check, proper handler paths)"
+    },
+    {
+      "prompt": "B_prompt",
+      "score": 72,
+      "reasons": "Good modular Terraform structure with separate files per service, proper glue adapters with logging, but backend config has interpolation issues and some truncation"
+    },
+    {
+      "prompt": "A_prompt",
+      "score": 68,
+      "reasons": "Monolithic app.tf approach, backend.tf has invalid string interpolation in backend block, minimal adapter files, missing comprehensive test coverage"
+    },
+    {
+      "prompt": "judge_prompts",
+      "score": 0,
+      "reasons": "Not a valid agent output bundle - appears to be evaluation metadata rather than infrastructure/code bundle"
+    }
+  ],
+  "winner": "C_prompt",
+  "notes": "C_prompt wins with best Terraform practices (proper backend config comments, fileexists guards, modular structure), includes test files meeting BRD requirements, and has comprehensive IAM policies. B_prompt close second with good modularization but backend syntax issues. A_prompt functional but monolithic and missing tests. All candidates need CloudWatch alarms implementation per guardrails."
+}

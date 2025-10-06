@@ -1,0 +1,688 @@
+```json
+{
+  "projectName": "Legacy SOAP Services Migration",
+  "description": "Migration and modernization of legacy Java SOAP web services to modern REST APIs with improved architecture and documentation",
+  "modules": [
+    {
+      "moduleName": "CustomerManagement",
+      "description": "Handles customer profile management, registration, and customer data operations",
+      "entities": [
+        {
+          "entityName": "Customer",
+          "description": "Represents a customer in the system",
+          "attributes": [
+            {
+              "name": "customerId",
+              "type": "Long",
+              "description": "Unique identifier for the customer",
+              "constraints": ["PRIMARY_KEY", "NOT_NULL", "AUTO_INCREMENT"]
+            },
+            {
+              "name": "firstName",
+              "type": "String",
+              "description": "Customer's first name",
+              "constraints": ["NOT_NULL", "MAX_LENGTH:100"]
+            },
+            {
+              "name": "lastName",
+              "type": "String",
+              "description": "Customer's last name",
+              "constraints": ["NOT_NULL", "MAX_LENGTH:100"]
+            },
+            {
+              "name": "email",
+              "type": "String",
+              "description": "Customer's email address",
+              "constraints": ["NOT_NULL", "UNIQUE", "EMAIL_FORMAT", "MAX_LENGTH:255"]
+            },
+            {
+              "name": "phoneNumber",
+              "type": "String",
+              "description": "Customer's contact phone number",
+              "constraints": ["MAX_LENGTH:20"]
+            },
+            {
+              "name": "dateOfBirth",
+              "type": "LocalDate",
+              "description": "Customer's date of birth",
+              "constraints": []
+            },
+            {
+              "name": "registrationDate",
+              "type": "LocalDateTime",
+              "description": "Date and time when customer registered",
+              "constraints": ["NOT_NULL"]
+            },
+            {
+              "name": "status",
+              "type": "String",
+              "description": "Customer account status (ACTIVE, INACTIVE, SUSPENDED)",
+              "constraints": ["NOT_NULL", "MAX_LENGTH:20"]
+            },
+            {
+              "name": "customerType",
+              "type": "String",
+              "description": "Type of customer (INDIVIDUAL, BUSINESS)",
+              "constraints": ["NOT_NULL", "MAX_LENGTH:20"]
+            },
+            {
+              "name": "createdAt",
+              "type": "LocalDateTime",
+              "description": "Timestamp of record creation",
+              "constraints": ["NOT_NULL"]
+            },
+            {
+              "name": "updatedAt",
+              "type": "LocalDateTime",
+              "description": "Timestamp of last update",
+              "constraints": ["NOT_NULL"]
+            }
+          ],
+          "relationships": [
+            {
+              "relatedEntity": "Address",
+              "relationshipType": "ONE_TO_MANY",
+              "description": "A customer can have multiple addresses"
+            },
+            {
+              "relatedEntity": "Order",
+              "relationshipType": "ONE_TO_MANY",
+              "description": "A customer can place multiple orders"
+            }
+          ]
+        },
+        {
+          "entityName": "Address",
+          "description": "Represents a customer address",
+          "attributes": [
+            {
+              "name": "addressId",
+              "type": "Long",
+              "description": "Unique identifier for the address",
+              "constraints": ["PRIMARY_KEY", "NOT_NULL", "AUTO_INCREMENT"]
+            },
+            {
+              "name": "customerId",
+              "type": "Long",
+              "description": "Reference to the customer",
+              "constraints": ["NOT_NULL", "FOREIGN_KEY"]
+            },
+            {
+              "name": "addressType",
+              "type": "String",
+              "description": "Type of address (BILLING, SHIPPING, BOTH)",
+              "constraints": ["NOT_NULL", "MAX_LENGTH:20"]
+            },
+            {
+              "name": "streetAddress1",
+              "type": "String",
+              "description": "Primary street address line",
+              "constraints": ["NOT_NULL", "MAX_LENGTH:255"]
+            },
+            {
+              "name": "streetAddress2",
+              "type": "String",
+              "description": "Secondary street address line",
+              "constraints": ["MAX_LENGTH:255"]
+            },
+            {
+              "name": "city",
+              "type": "String",
+              "description": "City name",
+              "constraints": ["NOT_NULL", "MAX_LENGTH:100"]
+            },
+            {
+              "name": "state",
+              "type": "String",
+              "description": "State or province",
+              "constraints": ["NOT_NULL", "MAX_LENGTH:100"]
+            },
+            {
+              "name": "postalCode",
+              "type": "String",
+              "description": "Postal or ZIP code",
+              "constraints": ["NOT_NULL", "MAX_LENGTH:20"]
+            },
+            {
+              "name": "country",
+              "type": "String",
+              "description": "Country name",
+              "constraints": ["NOT_NULL", "MAX_LENGTH:100"]
+            },
+            {
+              "name": "isPrimary",
+              "type": "Boolean",
+              "description": "Indicates if this is the primary address",
+              "constraints": ["NOT_NULL"]
+            },
+            {
+              "name": "createdAt",
+              "type": "LocalDateTime",
+              "description": "Timestamp of record creation",
+              "constraints": ["NOT_NULL"]
+            },
+            {
+              "name": "updatedAt",
+              "type": "LocalDateTime",
+              "description": "Timestamp of last update",
+              "constraints": ["NOT_NULL"]
+            }
+          ],
+          "relationships": [
+            {
+              "relatedEntity": "Customer",
+              "relationshipType": "MANY_TO_ONE",
+              "description": "An address belongs to a customer"
+            }
+          ]
+        }
+      ],
+      "services": [
+        {
+          "serviceName": "CustomerService",
+          "description": "Service for managing customer operations",
+          "operations": [
+            {
+              "operationName": "createCustomer",
+              "description": "Creates a new customer in the system",
+              "httpMethod": "POST",
+              "endpoint": "/api/v1/customers",
+              "requestParams": [
+                {
+                  "paramName": "customerRequest",
+                  "paramType": "CustomerCreateRequest",
+                  "description": "Customer creation request body",
+                  "required": true
+                }
+              ],
+              "responseType": "CustomerResponse",
+              "businessLogic": "Validates customer data, checks for duplicate email, creates customer record with ACTIVE status, generates customer ID, sets registration date to current timestamp"
+            },
+            {
+              "operationName": "getCustomerById",
+              "description": "Retrieves customer details by ID",
+              "httpMethod": "GET",
+              "endpoint": "/api/v1/customers/{customerId}",
+              "requestParams": [
+                {
+                  "paramName": "customerId",
+                  "paramType": "Long",
+                  "description": "Unique customer identifier",
+                  "required": true
+                }
+              ],
+              "responseType": "CustomerResponse",
+              "businessLogic": "Fetches customer by ID, returns customer details with associated addresses, throws NotFoundException if customer doesn't exist"
+            },
+            {
+              "operationName": "updateCustomer",
+              "description": "Updates existing customer information",
+              "httpMethod": "PUT",
+              "endpoint": "/api/v1/customers/{customerId}",
+              "requestParams": [
+                {
+                  "paramName": "customerId",
+                  "paramType": "Long",
+                  "description": "Unique customer identifier",
+                  "required": true
+                },
+                {
+                  "paramName": "customerRequest",
+                  "paramType": "CustomerUpdateRequest",
+                  "description": "Customer update request body",
+                  "required": true
+                }
+              ],
+              "responseType": "CustomerResponse",
+              "businessLogic": "Validates customer exists, checks email uniqueness if changed, updates customer fields, sets updatedAt timestamp, returns updated customer"
+            },
+            {
+              "operationName": "deleteCustomer",
+              "description": "Soft deletes a customer by setting status to INACTIVE",
+              "httpMethod": "DELETE",
+              "endpoint": "/api/v1/customers/{customerId}",
+              "requestParams": [
+                {
+                  "paramName": "customerId",
+                  "paramType": "Long",
+                  "description": "Unique customer identifier",
+                  "required": true
+                }
+              ],
+              "responseType": "void",
+              "businessLogic": "Validates customer exists, sets status to INACTIVE, updates timestamp, maintains data integrity for historical records"
+            },
+            {
+              "operationName": "searchCustomers",
+              "description": "Searches customers based on criteria",
+              "httpMethod": "GET",
+              "endpoint": "/api/v1/customers/search",
+              "requestParams": [
+                {
+                  "paramName": "firstName",
+                  "paramType": "String",
+                  "description": "Filter by first name",
+                  "required": false
+                },
+                {
+                  "paramName": "lastName",
+                  "paramType": "String",
+                  "description": "Filter by last name",
+                  "required": false
+                },
+                {
+                  "paramName": "email",
+                  "paramType": "String",
+                  "description": "Filter by email",
+                  "required": false
+                },
+                {
+                  "paramName": "status",
+                  "paramType": "String",
+                  "description": "Filter by status",
+                  "required": false
+                },
+                {
+                  "paramName": "page",
+                  "paramType": "Integer",
+                  "description": "Page number for pagination",
+                  "required": false
+                },
+                {
+                  "paramName": "size",
+                  "paramType": "Integer",
+                  "description": "Page size for pagination",
+                  "required": false
+                }
+              ],
+              "responseType": "PagedCustomerResponse",
+              "businessLogic": "Builds dynamic query based on provided filters, applies pagination, returns matching customers with total count"
+            }
+          ]
+        },
+        {
+          "serviceName": "AddressService",
+          "description": "Service for managing customer addresses",
+          "operations": [
+            {
+              "operationName": "addAddress",
+              "description": "Adds a new address for a customer",
+              "httpMethod": "POST",
+              "endpoint": "/api/v1/customers/{customerId}/addresses",
+              "requestParams": [
+                {
+                  "paramName": "customerId",
+                  "paramType": "Long",
+                  "description": "Customer identifier",
+                  "required": true
+                },
+                {
+                  "paramName": "addressRequest",
+                  "paramType": "AddressCreateRequest",
+                  "description": "Address creation request body",
+                  "required": true
+                }
+              ],
+              "responseType": "AddressResponse",
+              "businessLogic": "Validates customer exists, validates address data, if isPrimary is true then sets other addresses to non-primary, creates address record"
+            },
+            {
+              "operationName": "getCustomerAddresses",
+              "description": "Retrieves all addresses for a customer",
+              "httpMethod": "GET",
+              "endpoint": "/api/v1/customers/{customerId}/addresses",
+              "requestParams": [
+                {
+                  "paramName": "customerId",
+                  "paramType": "Long",
+                  "description": "Customer identifier",
+                  "required": true
+                }
+              ],
+              "responseType": "List<AddressResponse>",
+              "businessLogic": "Fetches all addresses associated with the customer, orders by isPrimary descending then by createdAt"
+            },
+            {
+              "operationName": "updateAddress",
+              "description": "Updates an existing address",
+              "httpMethod": "PUT",
+              "endpoint": "/api/v1/customers/{customerId}/addresses/{addressId}",
+              "requestParams": [
+                {
+                  "paramName": "customerId",
+                  "paramType": "Long",
+                  "description": "Customer identifier",
+                  "required": true
+                },
+                {
+                  "paramName": "addressId",
+                  "paramType": "Long",
+                  "description": "Address identifier",
+                  "required": true
+                },
+                {
+                  "paramName": "addressRequest",
+                  "paramType": "AddressUpdateRequest",
+                  "description": "Address update request body",
+                  "required": true
+                }
+              ],
+              "responseType": "AddressResponse",
+              "businessLogic": "Validates address belongs to customer, updates address fields, handles primary address logic, sets updatedAt timestamp"
+            },
+            {
+              "operationName": "deleteAddress",
+              "description": "Deletes a customer address",
+              "httpMethod": "DELETE",
+              "endpoint": "/api/v1/customers/{customerId}/addresses/{addressId}",
+              "requestParams": [
+                {
+                  "paramName": "customerId",
+                  "paramType": "Long",
+                  "description": "Customer identifier",
+                  "required": true
+                },
+                {
+                  "paramName": "addressId",
+                  "paramType": "Long",
+                  "description": "Address identifier",
+                  "required": true
+                }
+              ],
+              "responseType": "void",
+              "businessLogic": "Validates address belongs to customer, prevents deletion if it's the only address, deletes address record"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "moduleName": "OrderManagement",
+      "description": "Handles order processing, order lifecycle management, and order-related operations",
+      "entities": [
+        {
+          "entityName": "Order",
+          "description": "Represents a customer order",
+          "attributes": [
+            {
+              "name": "orderId",
+              "type": "Long",
+              "description": "Unique identifier for the order",
+              "constraints": ["PRIMARY_KEY", "NOT_NULL", "AUTO_INCREMENT"]
+            },
+            {
+              "name": "orderNumber",
+              "type": "String",
+              "description": "Human-readable order number",
+              "constraints": ["NOT_NULL", "UNIQUE", "MAX_LENGTH:50"]
+            },
+            {
+              "name": "customerId",
+              "type": "Long",
+              "description": "Reference to the customer",
+              "constraints": ["NOT_NULL", "FOREIGN_KEY"]
+            },
+            {
+              "name": "orderDate",
+              "type": "LocalDateTime",
+              "description": "Date and time when order was placed",
+              "constraints": ["NOT_NULL"]
+            },
+            {
+              "name": "status",
+              "type": "String",
+              "description": "Order status (PENDING, CONFIRMED, PROCESSING, SHIPPED, DELIVERED, CANCELLED)",
+              "constraints": ["NOT_NULL", "MAX_LENGTH:20"]
+            },
+            {
+              "name": "totalAmount",
+              "type": "BigDecimal",
+              "description": "Total order amount",
+              "constraints": ["NOT_NULL", "PRECISION:10", "SCALE:2"]
+            },
+            {
+              "name": "subtotal",
+              "type": "BigDecimal",
+              "description": "Subtotal before taxes and fees",
+              "constraints": ["NOT_NULL", "PRECISION:10", "SCALE:2"]
+            },
+            {
+              "name": "taxAmount",
+              "type": "BigDecimal",
+              "description": "Total tax amount",
+              "constraints": ["NOT_NULL", "PRECISION:10", "SCALE:2"]
+            },
+            {
+              "name": "shippingAmount",
+              "type": "BigDecimal",
+              "description": "Shipping cost",
+              "constraints": ["NOT_NULL", "PRECISION:10", "SCALE:2"]
+            },
+            {
+              "name": "discountAmount",
+              "type": "BigDecimal",
+              "description": "Total discount applied",
+              "constraints": ["PRECISION:10", "SCALE:2"]
+            },
+            {
+              "name": "shippingAddressId",
+              "type": "Long",
+              "description": "Reference to shipping address",
+              "constraints": ["NOT_NULL", "FOREIGN_KEY"]
+            },
+            {
+              "name": "billingAddressId",
+              "type": "Long",
+              "description": "Reference to billing address",
+              "constraints": ["NOT_NULL", "FOREIGN_KEY"]
+            },
+            {
+              "name": "paymentMethod",
+              "type": "String",
+              "description": "Payment method used (CREDIT_CARD, DEBIT_CARD, PAYPAL, BANK_TRANSFER)",
+              "constraints": ["NOT_NULL", "MAX_LENGTH:50"]
+            },
+            {
+              "name": "paymentStatus",
+              "type": "String",
+              "description": "Payment status (PENDING, AUTHORIZED, CAPTURED, FAILED, REFUNDED)",
+              "constraints": ["NOT_NULL", "MAX_LENGTH:20"]
+            },
+            {
+              "name": "notes",
+              "type": "String",
+              "description": "Additional order notes",
+              "constraints": ["MAX_LENGTH:1000"]
+            },
+            {
+              "name": "createdAt",
+              "type": "LocalDateTime",
+              "description": "Timestamp of record creation",
+              "constraints": ["NOT_NULL"]
+            },
+            {
+              "name": "updatedAt",
+              "type": "LocalDateTime",
+              "description": "Timestamp of last update",
+              "constraints": ["NOT_NULL"]
+            }
+          ],
+          "relationships": [
+            {
+              "relatedEntity": "Customer",
+              "relationshipType": "MANY_TO_ONE",
+              "description": "An order belongs to a customer"
+            },
+            {
+              "relatedEntity": "OrderItem",
+              "relationshipType": "ONE_TO_MANY",
+              "description": "An order contains multiple order items"
+            },
+            {
+              "relatedEntity": "OrderStatusHistory",
+              "relationshipType": "ONE_TO_MANY",
+              "description": "An order has status change history"
+            }
+          ]
+        },
+        {
+          "entityName": "OrderItem",
+          "description": "Represents an item within an order",
+          "attributes": [
+            {
+              "name": "orderItemId",
+              "type": "Long",
+              "description": "Unique identifier for the order item",
+              "constraints": ["PRIMARY_KEY", "NOT_NULL", "AUTO_INCREMENT"]
+            },
+            {
+              "name": "orderId",
+              "type": "Long",
+              "description": "Reference to the order",
+              "constraints": ["NOT_NULL", "FOREIGN_KEY"]
+            },
+            {
+              "name": "productId",
+              "type": "Long",
+              "description": "Reference to the product",
+              "constraints": ["NOT_NULL", "FOREIGN_KEY"]
+            },
+            {
+              "name": "productName",
+              "type": "String",
+              "description": "Product name at time of order",
+              "constraints": ["NOT_NULL", "MAX_LENGTH:255"]
+            },
+            {
+              "name": "productSku",
+              "type": "String",
+              "description": "Product SKU at time of order",
+              "constraints": ["NOT_NULL", "MAX_LENGTH:100"]
+            },
+            {
+              "name": "quantity",
+              "type": "Integer",
+              "description": "Quantity ordered",
+              "constraints": ["NOT_NULL", "MIN:1"]
+            },
+            {
+              "name": "unitPrice",
+              "type": "BigDecimal",
+              "description": "Price per unit at time of order",
+              "constraints": ["NOT_NULL", "PRECISION:10", "SCALE:2"]
+            },
+            {
+              "name": "totalPrice",
+              "type": "BigDecimal",
+              "description": "Total price for this line item",
+              "constraints": ["NOT_NULL", "PRECISION:10", "SCALE:2"]
+            },
+            {
+              "name": "discountAmount",
+              "type": "BigDecimal",
+              "description": "Discount applied to this item",
+              "constraints": ["PRECISION:10", "SCALE:2"]
+            },
+            {
+              "name": "taxAmount",
+              "type": "BigDecimal",
+              "description": "Tax amount for this item",
+              "constraints": ["NOT_NULL", "PRECISION:10", "SCALE:2"]
+            },
+            {
+              "name": "createdAt",
+              "type": "LocalDateTime",
+              "description": "Timestamp of record creation",
+              "constraints": ["NOT_NULL"]
+            }
+          ],
+          "relationships": [
+            {
+              "relatedEntity": "Order",
+              "relationshipType": "MANY_TO_ONE",
+              "description": "An order item belongs to an order"
+            },
+            {
+              "relatedEntity": "Product",
+              "relationshipType": "MANY_TO_ONE",
+              "description": "An order item references a product"
+            }
+          ]
+        },
+        {
+          "entityName": "OrderStatusHistory",
+          "description": "Tracks order status changes over time",
+          "attributes": [
+            {
+              "name": "historyId",
+              "type": "Long",
+              "description": "Unique identifier for the history record",
+              "constraints": ["PRIMARY_KEY", "NOT_NULL", "AUTO_INCREMENT"]
+            },
+            {
+              "name": "orderId",
+              "type": "Long",
+              "description": "Reference to the order",
+              "constraints": ["NOT_NULL", "FOREIGN_KEY"]
+            },
+            {
+              "name": "previousStatus",
+              "type": "String",
+              "description": "Previous order status",
+              "constraints": ["MAX_LENGTH:20"]
+            },
+            {
+              "name": "newStatus",
+              "type": "String",
+              "description": "New order status",
+              "constraints": ["NOT_NULL", "MAX_LENGTH:20"]
+            },
+            {
+              "name": "changedBy",
+              "type": "String",
+              "description": "User or system that made the change",
+              "constraints": ["NOT_NULL", "MAX_LENGTH:100"]
+            },
+            {
+              "name": "changeReason",
+              "type": "String",
+              "description": "Reason for status change",
+              "constraints": ["MAX_LENGTH:500"]
+            },
+            {
+              "name": "changedAt",
+              "type": "LocalDateTime",
+              "description": "Timestamp of status change",
+              "constraints": ["NOT_NULL"]
+            }
+          ],
+          "relationships": [
+            {
+              "relatedEntity": "Order",
+              "relationshipType": "MANY_TO_ONE",
+              "description": "A history record belongs to an order"
+            }
+          ]
+        }
+      ],
+      "services": [
+        {
+          "serviceName": "OrderService",
+          "description": "Service for managing order operations",
+          "operations": [
+            {
+              "operationName": "createOrder",
+              "description": "Creates a new order",
+              "httpMethod": "POST",
+              "endpoint": "/api/v1/orders",
+              "requestParams": [
+                {
+                  "paramName": "orderRequest",
+                  "paramType": "OrderCreateRequest",
+                  "description": "Order creation request body",
+                  "required": true
+                }
+              ],
+              "responseType": "OrderResponse",
+              "businessLogic": "Validates customer exists, validates products and inventory, calculates totals (subtotal, tax, shipping, discounts), generates unique order number, creates order with PENDING status, creates order items, creates initial status history record, returns created order"
+            },

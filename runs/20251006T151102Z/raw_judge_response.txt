@@ -1,0 +1,23 @@
+```json
+{
+  "ranking": [
+    {
+      "prompt": "B_prompt",
+      "score": 88,
+      "reasons": "Comprehensive bundle with structured logging, glue adapters, proper IAM scoping, complete CI/CD, and integration tests; minor deductions for slightly verbose structure."
+    },
+    {
+      "prompt": "A_prompt",
+      "score": 82,
+      "reasons": "Solid baseline bundle with all required components, proper IAM policies, and CI/CD; lacks structured logging layer and integration tests present in B."
+    },
+    {
+      "prompt": "C_prompt",
+      "score": 79,
+      "reasons": "Well-organized with separate IAM policy files and contract tests; minimal glue adapters lack error handling; multiple archive_file resources may cause packaging issues."
+    }
+  ],
+  "winner": "B_prompt",
+  "notes": "All three candidates meet core requirements. B_prompt edges ahead with superior observability (structured JSON logging), better error handling in glue adapters, and integration tests. A_prompt provides a clean, functional baseline. C_prompt's separate policy files aid maintainability but thin glue wrappers and potential packaging conflicts lower deployability confidence."
+}
+```

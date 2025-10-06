@@ -1,0 +1,14 @@
+Timebox analysis to the strongest BRD signals.
+
+1) Extract top 5 pain points verbatim (≤12 words each).
+2) Map each to 1–2 domains with rationale (≤20 words).
+3) Suggest 3 quick-win workstreams tied to those points.
+4) Flag unknowns/gaps that block deeper scoping.
+
+[INPUT: BRD]
+{BRD_TEXT}
+
+[SCHEMA]
+{SCHEMA}
+
+Return JSON { pain_points[], mappings[], quick_wins[], gaps[] } with BRD evidence locators.

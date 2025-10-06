@@ -1,0 +1,576 @@
+```json
+{
+  "domains": [
+    {
+      "name": "Legacy System Migration & Modernization",
+      "scope": "Migration from mainframe COBOL systems to cloud-native microservices architecture, including data migration, API development, and system integration",
+      "blocking_risks": [
+        {
+          "risk": "Data loss or corruption during migration from legacy databases",
+          "severity": "critical",
+          "mitigation": "Implement dual-run period with reconciliation, automated data validation, rollback procedures"
+        },
+        {
+          "risk": "Business continuity disruption during cutover periods",
+          "severity": "high",
+          "mitigation": "Phased migration approach, maintain parallel systems, establish clear rollback criteria"
+        },
+        {
+          "risk": "Undocumented business logic in legacy COBOL code",
+          "severity": "high",
+          "mitigation": "Code archaeology workshops, business analyst validation, comprehensive testing"
+        },
+        {
+          "risk": "Skills gap in both legacy and modern technologies",
+          "severity": "medium",
+          "mitigation": "Hybrid team structure, knowledge transfer sessions, external consulting support"
+        }
+      ],
+      "dependencies": [
+        "Cloud Infrastructure & Platform Services domain for target environment",
+        "Data Governance & Management domain for migration standards",
+        "Security & Compliance Modernization domain for security controls",
+        "Integration & API Strategy domain for service interfaces"
+      ],
+      "workstreams": [
+        {
+          "name": "Legacy System Assessment & Documentation",
+          "deliverables": ["System inventory", "Dependency mapping", "Business logic documentation"]
+        },
+        {
+          "name": "Migration Architecture Design",
+          "deliverables": ["Target state architecture", "Migration patterns", "Data migration strategy"]
+        },
+        {
+          "name": "Pilot Migration Execution",
+          "deliverables": ["Pilot system migrated", "Lessons learned", "Refined migration playbook"]
+        },
+        {
+          "name": "Production Migration Waves",
+          "deliverables": ["Migrated systems per wave", "Cutover reports", "Decommissioning plans"]
+        }
+      ],
+      "priority": "critical",
+      "evidence": [
+        {
+          "locator": "Section 2.1 - Current State Assessment",
+          "excerpt": "The organization operates 47 mainframe applications written primarily in COBOL... many systems lack comprehensive documentation... critical business logic embedded in code without external specification"
+        },
+        {
+          "locator": "Section 3.2 - Technical Objectives",
+          "excerpt": "Migrate core business applications from mainframe to cloud-native architecture within 24 months... minimize business disruption during transition"
+        },
+        {
+          "locator": "Section 5.1 - Key Risks",
+          "excerpt": "Data migration presents highest technical risk... potential for data loss, corruption, or inconsistency... business continuity must be maintained throughout"
+        }
+      ]
+    },
+    {
+      "name": "Cloud Infrastructure & Platform Services",
+      "scope": "Establishment of multi-cloud infrastructure, container orchestration, platform services, DevOps tooling, and infrastructure-as-code frameworks",
+      "blocking_risks": [
+        {
+          "risk": "Vendor lock-in limiting future flexibility and increasing costs",
+          "severity": "high",
+          "mitigation": "Multi-cloud strategy, abstraction layers, portable containerization, avoid proprietary services"
+        },
+        {
+          "risk": "Cost overruns from uncontrolled cloud consumption",
+          "severity": "high",
+          "mitigation": "FinOps practices, cost monitoring, resource tagging, automated scaling policies"
+        },
+        {
+          "risk": "Security misconfigurations exposing sensitive data",
+          "severity": "critical",
+          "mitigation": "Infrastructure-as-code with security scanning, policy-as-code, automated compliance checks"
+        },
+        {
+          "risk": "Network latency and connectivity issues affecting performance",
+          "severity": "medium",
+          "mitigation": "Multi-region deployment, CDN implementation, network performance monitoring"
+        }
+      ],
+      "dependencies": [
+        "Security & Compliance Modernization domain for cloud security controls",
+        "Legacy System Migration domain as primary consumer",
+        "Data Governance & Management domain for data residency requirements",
+        "Observability & Operations domain for monitoring infrastructure"
+      ],
+      "workstreams": [
+        {
+          "name": "Cloud Platform Selection & Setup",
+          "deliverables": ["Cloud provider evaluation", "Landing zones configured", "Network architecture"]
+        },
+        {
+          "name": "Container Platform Implementation",
+          "deliverables": ["Kubernetes clusters", "Container registry", "Orchestration policies"]
+        },
+        {
+          "name": "DevOps Toolchain Deployment",
+          "deliverables": ["CI/CD pipelines", "Infrastructure-as-code templates", "Automation frameworks"]
+        },
+        {
+          "name": "Platform Services Enablement",
+          "deliverables": ["Managed services catalog", "Self-service portals", "Platform documentation"]
+        }
+      ],
+      "priority": "critical",
+      "evidence": [
+        {
+          "locator": "Section 3.1 - Strategic Vision",
+          "excerpt": "Establish cloud-first infrastructure leveraging containerization and microservices... enable rapid deployment and scaling... reduce infrastructure costs by 40%"
+        },
+        {
+          "locator": "Section 4.3 - Infrastructure Requirements",
+          "excerpt": "Multi-cloud capability required to avoid vendor lock-in... Kubernetes-based container orchestration... comprehensive DevOps tooling for automation"
+        },
+        {
+          "locator": "Section 5.2 - Cost Considerations",
+          "excerpt": "Cloud costs must be carefully managed... implement FinOps practices... establish cost allocation and chargeback mechanisms"
+        }
+      ]
+    },
+    {
+      "name": "Data Governance & Management",
+      "scope": "Data quality frameworks, master data management, data cataloging, lineage tracking, privacy controls, and data lifecycle management",
+      "blocking_risks": [
+        {
+          "risk": "Inconsistent data definitions across migrated systems",
+          "severity": "high",
+          "mitigation": "Establish enterprise data model, data dictionary, canonical data formats"
+        },
+        {
+          "risk": "Privacy regulation violations (GDPR, CCPA) during data handling",
+          "severity": "critical",
+          "mitigation": "Data classification, privacy-by-design, consent management, data residency controls"
+        },
+        {
+          "risk": "Poor data quality undermining business decisions",
+          "severity": "high",
+          "mitigation": "Data quality rules, automated validation, data stewardship program"
+        },
+        {
+          "risk": "Loss of data lineage during migration",
+          "severity": "medium",
+          "mitigation": "Automated lineage tracking, metadata management, documentation standards"
+        }
+      ],
+      "dependencies": [
+        "Legacy System Migration domain for data migration standards",
+        "Security & Compliance Modernization domain for data protection",
+        "Integration & API Strategy domain for data exchange standards",
+        "Analytics & Business Intelligence domain for data consumption"
+      ],
+      "workstreams": [
+        {
+          "name": "Data Governance Framework",
+          "deliverables": ["Governance policies", "Data stewardship model", "Decision rights matrix"]
+        },
+        {
+          "name": "Master Data Management",
+          "deliverables": ["MDM platform", "Golden records", "Data quality rules"]
+        },
+        {
+          "name": "Data Catalog & Lineage",
+          "deliverables": ["Data catalog tool", "Metadata repository", "Lineage visualization"]
+        },
+        {
+          "name": "Privacy & Compliance Controls",
+          "deliverables": ["Data classification", "Privacy controls", "Retention policies"]
+        }
+      ],
+      "priority": "high",
+      "evidence": [
+        {
+          "locator": "Section 2.3 - Data Landscape",
+          "excerpt": "Data scattered across 200+ databases with inconsistent definitions... no enterprise data model... data quality issues impacting reporting accuracy"
+        },
+        {
+          "locator": "Section 3.4 - Data Strategy",
+          "excerpt": "Establish single source of truth for master data... implement comprehensive data governance... ensure compliance with privacy regulations"
+        },
+        {
+          "locator": "Section 6.2 - Regulatory Requirements",
+          "excerpt": "Must comply with GDPR, CCPA, and industry-specific regulations... data residency requirements... right to erasure capabilities"
+        }
+      ]
+    },
+    {
+      "name": "Security & Compliance Modernization",
+      "scope": "Zero-trust architecture, identity and access management, security automation, compliance frameworks, threat detection, and incident response",
+      "blocking_risks": [
+        {
+          "risk": "Security vulnerabilities in new cloud-native architecture",
+          "severity": "critical",
+          "mitigation": "Security-by-design, automated vulnerability scanning, penetration testing, security champions"
+        },
+        {
+          "risk": "Compliance gaps during transition period",
+          "severity": "critical",
+          "mitigation": "Continuous compliance monitoring, audit trails, compliance-as-code, regulatory liaison"
+        },
+        {
+          "risk": "Inadequate identity and access controls in distributed systems",
+          "severity": "high",
+          "mitigation": "Zero-trust implementation, MFA enforcement, least privilege access, regular access reviews"
+        },
+        {
+          "risk": "Insufficient security skills in modern cloud security",
+          "severity": "high",
+          "mitigation": "Security training programs, external security consultants, managed security services"
+        }
+      ],
+      "dependencies": [
+        "Cloud Infrastructure domain for security controls implementation",
+        "Legacy System Migration domain for security during transition",
+        "Data Governance domain for data protection requirements",
+        "Integration & API Strategy domain for API security"
+      ],
+      "workstreams": [
+        {
+          "name": "Zero-Trust Architecture Implementation",
+          "deliverables": ["Zero-trust design", "Micro-segmentation", "Identity verification"]
+        },
+        {
+          "name": "Identity & Access Management",
+          "deliverables": ["IAM platform", "SSO implementation", "RBAC policies"]
+        },
+        {
+          "name": "Security Automation & DevSecOps",
+          "deliverables": ["Security scanning tools", "Automated remediation", "Security pipelines"]
+        },
+        {
+          "name": "Compliance Framework & Monitoring",
+          "deliverables": ["Compliance controls", "Audit automation", "Compliance dashboards"]
+        }
+      ],
+      "priority": "critical",
+      "evidence": [
+        {
+          "locator": "Section 3.3 - Security Requirements",
+          "excerpt": "Implement zero-trust security model... all access must be authenticated and authorized... assume breach mentality with continuous monitoring"
+        },
+        {
+          "locator": "Section 5.1 - Security Risks",
+          "excerpt": "Modernization introduces new attack surfaces... cloud misconfigurations are leading cause of breaches... must maintain security during transition"
+        },
+        {
+          "locator": "Section 6.1 - Compliance Obligations",
+          "excerpt": "Must maintain SOC 2 Type II, ISO 27001, PCI-DSS compliance... regulatory audits scheduled during modernization period... no compliance exceptions permitted"
+        }
+      ]
+    },
+    {
+      "name": "Integration & API Strategy",
+      "scope": "API gateway implementation, service mesh, event-driven architecture, integration patterns, API lifecycle management, and partner connectivity",
+      "blocking_risks": [
+        {
+          "risk": "API versioning conflicts breaking existing integrations",
+          "severity": "high",
+          "mitigation": "Semantic versioning, backward compatibility requirements, deprecation policies"
+        },
+        {
+          "risk": "Performance bottlenecks in integration layer",
+          "severity": "medium",
+          "mitigation": "Caching strategies, asynchronous patterns, load testing, capacity planning"
+        },
+        {
+          "risk": "Inconsistent API standards across teams",
+          "severity": "medium",
+          "mitigation": "API design standards, governance reviews, automated linting, developer portal"
+        },
+        {
+          "risk": "Third-party integration failures during migration",
+          "severity": "high",
+          "mitigation": "Partner communication plan, adapter patterns, fallback mechanisms, integration testing"
+        }
+      ],
+      "dependencies": [
+        "Legacy System Migration domain for legacy system integration",
+        "Cloud Infrastructure domain for API gateway infrastructure",
+        "Security & Compliance domain for API security",
+        "Observability & Operations domain for API monitoring"
+      ],
+      "workstreams": [
+        {
+          "name": "API Strategy & Standards",
+          "deliverables": ["API standards", "Design guidelines", "Governance model"]
+        },
+        {
+          "name": "API Gateway & Management",
+          "deliverables": ["API gateway deployed", "Developer portal", "API catalog"]
+        },
+        {
+          "name": "Event-Driven Architecture",
+          "deliverables": ["Event streaming platform", "Event schemas", "Event catalog"]
+        },
+        {
+          "name": "Integration Patterns & Adapters",
+          "deliverables": ["Integration patterns library", "Legacy adapters", "Partner connectors"]
+        }
+      ],
+      "priority": "high",
+      "evidence": [
+        {
+          "locator": "Section 3.5 - Integration Architecture",
+          "excerpt": "Establish API-first approach for all integrations... implement event-driven architecture for real-time data flow... decouple systems through well-defined interfaces"
+        },
+        {
+          "locator": "Section 4.4 - Integration Requirements",
+          "excerpt": "Must maintain 150+ existing integrations during migration... third-party partners require stable APIs... support both synchronous and asynchronous patterns"
+        },
+        {
+          "locator": "Section 5.3 - Integration Risks",
+          "excerpt": "Breaking existing integrations could impact revenue... partner integrations have SLA commitments... versioning strategy critical to success"
+        }
+      ]
+    },
+    {
+      "name": "Application Development & Engineering Practices",
+      "scope": "Modern development frameworks, microservices patterns, testing automation, code quality, developer experience, and engineering culture transformation",
+      "blocking_risks": [
+        {
+          "risk": "Developer resistance to new technologies and practices",
+          "severity": "high",
+          "mitigation": "Training programs, communities of practice, early wins, leadership support"
+        },
+        {
+          "risk": "Technical debt accumulation in rushed modernization",
+          "severity": "high",
+          "mitigation": "Code quality gates, technical debt tracking, refactoring sprints, architecture reviews"
+        },
+        {
+          "risk": "Inconsistent microservices implementation across teams",
+          "severity": "medium",
+          "mitigation": "Reference architectures, service templates, architecture guild, peer reviews"
+        },
+        {
+          "risk": "Inadequate testing leading to production defects",
+          "severity": "high",
+          "mitigation": "Test automation strategy, shift-left testing, test coverage requirements, QA embedded in teams"
+        }
+      ],
+      "dependencies": [
+        "Cloud Infrastructure domain for development platforms",
+        "Integration & API Strategy domain for service interfaces",
+        "Observability & Operations domain for application monitoring",
+        "Security & Compliance domain for secure coding practices"
+      ],
+      "workstreams": [
+        {
+          "name": "Development Standards & Practices",
+          "deliverables": ["Coding standards", "Architecture patterns", "Development guidelines"]
+        },
+        {
+          "name": "Microservices Framework & Templates",
+          "deliverables": ["Service templates", "Shared libraries", "Reference implementations"]
+        },
+        {
+          "name": "Test Automation & Quality",
+          "deliverables": ["Test frameworks", "Automated test suites", "Quality dashboards"]
+        },
+        {
+          "name": "Developer Experience & Tooling",
+          "deliverables": ["Developer portal", "Local development environments", "Inner source platform"]
+        }
+      ],
+      "priority": "high",
+      "evidence": [
+        {
+          "locator": "Section 2.2 - Current Development Practices",
+          "excerpt": "Waterfall development with 6-month release cycles... limited automation... manual testing predominant... developers lack modern skills"
+        },
+        {
+          "locator": "Section 3.6 - Engineering Transformation",
+          "excerpt": "Adopt agile and DevOps practices... implement continuous integration and deployment... shift to product-oriented teams... improve developer productivity"
+        },
+        {
+          "locator": "Section 4.5 - Quality Requirements",
+          "excerpt": "Automated testing required for all code... minimum 80% code coverage... zero critical defects in production... performance testing mandatory"
+        }
+      ]
+    },
+    {
+      "name": "Observability & Operations",
+      "scope": "Monitoring, logging, tracing, alerting, incident management, SRE practices, chaos engineering, and operational excellence",
+      "blocking_risks": [
+        {
+          "risk": "Blind spots in distributed system monitoring",
+          "severity": "high",
+          "mitigation": "Comprehensive observability stack, distributed tracing, synthetic monitoring, SLO definition"
+        },
+        {
+          "risk": "Alert fatigue reducing incident response effectiveness",
+          "severity": "medium",
+          "mitigation": "Alert tuning, intelligent alerting, on-call rotation, runbook automation"
+        },
+        {
+          "risk": "Lack of operational readiness for cloud-native systems",
+          "severity": "high",
+          "mitigation": "SRE training, operational runbooks, chaos engineering, game days"
+        },
+        {
+          "risk": "Insufficient capacity planning leading to outages",
+          "severity": "high",
+          "mitigation": "Capacity modeling, load testing, auto-scaling, performance baselines"
+        }
+      ],
+      "dependencies": [
+        "Cloud Infrastructure domain for monitoring infrastructure",
+        "Application Development domain for instrumentation",
+        "Integration & API Strategy domain for API monitoring",
+        "Legacy System Migration domain for hybrid monitoring"
+      ],
+      "workstreams": [
+        {
+          "name": "Observability Platform Implementation",
+          "deliverables": ["Monitoring tools", "Logging aggregation", "Distributed tracing"]
+        },
+        {
+          "name": "SRE Practices & Incident Management",
+          "deliverables": ["SLO/SLI definitions", "Incident response procedures", "Post-mortem process"]
+        },
+        {
+          "name": "Operational Automation",
+          "deliverables": ["Runbook automation", "Self-healing systems", "Automated remediation"]
+        },
+        {
+          "name": "Performance & Capacity Management",
+          "deliverables": ["Performance baselines", "Capacity models", "Load testing framework"]
+        }
+      ],
+      "priority": "high",
+      "evidence": [
+        {
+          "locator": "Section 3.7 - Operational Excellence",
+          "excerpt": "Implement comprehensive observability across all systems... adopt SRE principles... reduce MTTR by 75%... achieve 99.95% availability"
+        },
+        {
+          "locator": "Section 4.6 - Operational Requirements",
+          "excerpt": "Full-stack observability required... distributed tracing for all transactions... automated incident response... chaos engineering for resilience"
+        },
+        {
+          "locator": "Section 5.4 - Operational Risks",
+          "excerpt": "Complexity of distributed systems increases operational burden... lack of visibility into microservices... traditional monitoring insufficient"
+        }
+      ]
+    },
+    {
+      "name": "Analytics & Business Intelligence",
+      "scope": "Data warehousing, analytics platforms, self-service BI, machine learning infrastructure, and data science enablement",
+      "blocking_risks": [
+        {
+          "risk": "Data silos preventing unified analytics",
+          "severity": "high",
+          "mitigation": "Data lake implementation, unified data model, data integration pipelines"
+        },
+        {
+          "risk": "Poor data quality undermining analytics accuracy",
+          "severity": "high",
+          "mitigation": "Data quality framework, validation rules, data profiling, stewardship"
+        },
+        {
+          "risk": "Lack of analytics skills limiting adoption",
+          "severity": "medium",
+          "mitigation": "Training programs, citizen data scientist enablement, analytics center of excellence"
+        },
+        {
+          "risk": "Performance issues with large-scale analytics",
+          "severity": "medium",
+          "mitigation": "Data partitioning, caching strategies, query optimization, scalable infrastructure"
+        }
+      ],
+      "dependencies": [
+        "Data Governance domain for data quality and standards",
+        "Cloud Infrastructure domain for analytics platforms",
+        "Legacy System Migration domain for historical data",
+        "Integration & API Strategy domain for data ingestion"
+      ],
+      "workstreams": [
+        {
+          "name": "Analytics Platform Implementation",
+          "deliverables": ["Data warehouse", "Data lake", "Analytics tools"]
+        },
+        {
+          "name": "Self-Service BI Enablement",
+          "deliverables": ["BI platform", "Report templates", "User training"]
+        },
+        {
+          "name": "Machine Learning Infrastructure",
+          "deliverables": ["ML platform", "Model registry", "Feature store"]
+        },
+        {
+          "name": "Data Science Enablement",
+          "deliverables": ["Notebooks environment", "Experimentation platform", "Model deployment pipeline"]
+        }
+      ],
+      "priority": "medium",
+      "evidence": [
+        {
+          "locator": "Section 3.8 - Analytics Vision",
+          "excerpt": "Enable data-driven decision making across organization... implement self-service analytics... leverage machine learning for insights... democratize data access"
+        },
+        {
+          "locator": "Section 4.7 - Analytics Requirements",
+          "excerpt": "Unified analytics platform required... support for both structured and unstructured data... real-time and batch analytics... ML model deployment capabilities"
+        },
+        {
+          "locator": "Section 2.4 - Current Analytics State",
+          "excerpt": "Analytics fragmented across multiple tools... reports take weeks to generate... limited self-service capability... no ML capabilities"
+        }
+      ]
+    },
+    {
+      "name": "User Experience & Digital Channels",
+      "scope": "Modern UI frameworks, mobile applications, progressive web apps, design systems, accessibility, and omnichannel experience",
+      "blocking_risks": [
+        {
+          "risk": "User adoption failure due to poor UX design",
+          "severity": "high",
+          "mitigation": "User research, usability testing, iterative design, user feedback loops"
+        },
+        {
+          "risk": "Accessibility compliance gaps",
+          "severity": "medium",
+          "mitigation": "WCAG 2.1 compliance, automated accessibility testing, accessibility training"
+        },
+        {
+          "risk": "Inconsistent experience across channels",
+          "severity": "medium",
+          "mitigation": "Design system, component library, cross-channel testing, unified design language"
+        },
+        {
+          "risk": "Performance issues impacting user satisfaction",
+          "severity": "high",
+          "mitigation": "Performance budgets, lazy loading, CDN, progressive enhancement, performance monitoring"
+        }
+      ],
+      "dependencies": [
+        "Application Development domain for frontend frameworks",
+        "Integration & API Strategy domain for backend services",
+        "Cloud Infrastructure domain for hosting and CDN",
+        "Observability & Operations domain for user experience monitoring"
+      ],
+      "workstreams": [
+        {
+          "name": "Design System & Component Library",
+          "deliverables": ["Design system", "Component library", "Design tokens"]
+        },
+        {
+          "name": "Web & Mobile Applications",
+          "deliverables": ["Responsive web apps", "Native mobile apps", "PWA implementation"]
+        },
+        {
+          "name": "Accessibility & Usability",
+          "deliverables": ["Accessibility compliance", "Usability testing", "User research"]
+        },
+        {
+          "name": "Performance Optimization",
+          "deliverables": ["Performance baselines", "Optimization strategies", "Monitoring dashboards"]
+        }
+      ],
+      "priority": "medium",
+      "evidence": [
+        {
+          "locator": "

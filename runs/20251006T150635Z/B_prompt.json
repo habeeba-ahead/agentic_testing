@@ -1,0 +1,161 @@
+```json
+{
+  "bundle_manifest": [
+    {
+      "path": "infra/terraform/providers.tf",
+      "purpose": "Terraform provider configuration with empty S3 backend for CI injection",
+      "generated_bytes": 1024
+    },
+    {
+      "path": "infra/terraform/variables.tf",
+      "purpose": "Global variables for project, env, region, and resource naming",
+      "generated_bytes": 896
+    },
+    {
+      "path": "infra/terraform/api.tf",
+      "purpose": "HTTP API Gateway v2 with routes to Orders and Health Lambda functions",
+      "generated_bytes": 2048
+    },
+    {
+      "path": "infra/terraform/orders.tf",
+      "purpose": "Orders service: Lambda functions, DynamoDB table, IAM policies",
+      "generated_bytes": 3584
+    },
+    {
+      "path": "infra/terraform/inventory.tf",
+      "purpose": "Inventory service: Lambda function, DynamoDB table with TTL, IAM policies",
+      "generated_bytes": 3200
+    },
+    {
+      "path": "infra/terraform/receipts.tf",
+      "purpose": "Receipts worker: Lambda function triggered by EventBridge rule",
+      "generated_bytes": 2560
+    },
+    {
+      "path": "infra/terraform/ingestor.tf",
+      "purpose": "CRM ingestor: S3 bucket, Lambda function, S3 notification trigger",
+      "generated_bytes": 2816
+    },
+    {
+      "path": "infra/terraform/eventbridge.tf",
+      "purpose": "EventBridge custom bus and rules for ReceiptGenerated and CustomerUpserted",
+      "generated_bytes": 2304
+    },
+    {
+      "path": "infra/terraform/outputs.tf",
+      "purpose": "Terraform outputs for API endpoint, table names, bucket name",
+      "generated_bytes": 768
+    },
+    {
+      "path": "src/common/logger.py",
+      "purpose": "Structured JSON logging utility for all Lambda functions",
+      "generated_bytes": 1152
+    },
+    {
+      "path": "src/orders/glue.py",
+      "purpose": "Adapter wrapper for orders handlers with structured logging",
+      "generated_bytes": 1536
+    },
+    {
+      "path": "src/inventory/glue.py",
+      "purpose": "Adapter wrapper for inventory handler with structured logging",
+      "generated_bytes": 1280
+    },
+    {
+      "path": "src/receipts/glue.py",
+      "purpose": "Adapter wrapper for receipts worker with structured logging",
+      "generated_bytes": 1024
+    },
+    {
+      "path": "src/ingestor/glue.py",
+      "purpose": "Adapter wrapper for CSV ingestor with structured logging",
+      "generated_bytes": 1024
+    },
+    {
+      "path": "src/ops/glue.py",
+      "purpose": "Adapter wrapper for health check with structured logging",
+      "generated_bytes": 896
+    },
+    {
+      "path": "tests/test_orders.py",
+      "purpose": "Unit tests for orders create and get handlers",
+      "generated_bytes": 2048
+    },
+    {
+      "path": "tests/test_inventory.py",
+      "purpose": "Unit tests for inventory reserve handler including idempotency",
+      "generated_bytes": 2304
+    },
+    {
+      "path": "tests/test_receipts.py",
+      "purpose": "Unit test for receipts worker",
+      "generated_bytes": 1024
+    },
+    {
+      "path": "tests/test_ingestor.py",
+      "purpose": "Unit test for CRM CSV ingestor",
+      "generated_bytes": 1536
+    },
+    {
+      "path": "tests/test_integration.py",
+      "purpose": "Integration-light test exercising order creation to receipt generation flow",
+      "generated_bytes": 1792
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "purpose": "CI workflow: lint, test, package, terraform validate/plan on PR; apply to staging on main",
+      "generated_bytes": 3840
+    },
+    {
+      "path": "readme.md",
+      "purpose": "Project overview, architecture, deployment instructions",
+      "generated_bytes": 4096
+    },
+    {
+      "path": "changelog.md",
+      "purpose": "Initial stitch changelog entry",
+      "generated_bytes": 512
+    }
+  ],
+  "src": {
+    "files": [
+      {
+        "path": "src/common/logger.py",
+        "content": "# src/common/logger.py\nimport json\nimport logging\nimport sys\nfrom datetime import datetime\nfrom typing import Any, Dict\n\nclass JSONFormatter(logging.Formatter):\n    def format(self, record: logging.LogRecord) -> str:\n        log_obj = {\n            \"timestamp\": datetime.utcnow().isoformat() + \"Z\",\n            \"level\": record.levelname,\n            \"message\": record.getMessage(),\n            \"logger\": record.name,\n        }\n        if record.exc_info:\n            log_obj[\"exception\"] = self.formatException(record.exc_info)\n        if hasattr(record, \"context\"):\n            log_obj[\"context\"] = record.context\n        return json.dumps(log_obj)\n\ndef get_logger(name: str) -> logging.Logger:\n    logger = logging.getLogger(name)\n    if not logger.handlers:\n        handler = logging.StreamHandler(sys.stdout)\n        handler.setFormatter(JSONFormatter())\n        logger.addHandler(handler)\n        logger.setLevel(logging.INFO)\n    return logger\n\ndef log_entry(logger: logging.Logger, event: Dict[str, Any], context: Any) -> None:\n    logger.info(\"Handler invoked\", extra={\"context\": {\"request_id\": context.request_id, \"event_keys\": list(event.keys())}})\n\ndef log_exit(logger: logging.Logger, response: Any) -> None:\n    logger.info(\"Handler completed\", extra={\"context\": {\"response_status\": response.get(\"statusCode\") if isinstance(response, dict) else \"N/A\"}})\n\ndef log_error(logger: logging.Logger, error: Exception) -> None:\n    logger.error(\"Handler error\", exc_info=error)\n"
+      },
+      {
+        "path": "src/orders/glue.py",
+        "content": "# src/orders/glue.py\nimport sys\nimport os\nsys.path.insert(0, os.path.join(os.path.dirname(__file__), \"..\"))\n\nfrom common.logger import get_logger, log_entry, log_exit, log_error\nfrom orders.handlers import create_order as _create_order, get_order as _get_order\n\nlogger = get_logger(\"orders.glue\")\n\ndef create_order(event, context):\n    log_entry(logger, event, context)\n    try:\n        response = _create_order(event, context)\n        log_exit(logger, response)\n        return response\n    except Exception as e:\n        log_error(logger, e)\n        return {\"statusCode\": 500, \"body\": '{\"error\":\"Internal server error\"}'}\n\ndef get_order(event, context):\n    log_entry(logger, event, context)\n    try:\n        response = _get_order(event, context)\n        log_exit(logger, response)\n        return response\n    except Exception as e:\n        log_error(logger, e)\n        return {\"statusCode\": 500, \"body\": '{\"error\":\"Internal server error\"}'}\n"
+      },
+      {
+        "path": "src/inventory/glue.py",
+        "content": "# src/inventory/glue.py\nimport sys\nimport os\nsys.path.insert(0, os.path.join(os.path.dirname(__file__), \"..\"))\n\nfrom common.logger import get_logger, log_entry, log_exit, log_error\nfrom inventory.handlers import reserve as _reserve\n\nlogger = get_logger(\"inventory.glue\")\n\ndef reserve(event, context):\n    log_entry(logger, event, context)\n    try:\n        response = _reserve(event, context)\n        log_exit(logger, response)\n        return response\n    except Exception as e:\n        log_error(logger, e)\n        return {\"statusCode\": 500, \"body\": '{\"error\":\"Internal server error\"}'}\n"
+      },
+      {
+        "path": "src/receipts/glue.py",
+        "content": "# src/receipts/glue.py\nimport sys\nimport os\nsys.path.insert(0, os.path.join(os.path.dirname(__file__), \"..\"))\n\nfrom common.logger import get_logger, log_entry, log_exit, log_error\nfrom receipts.worker import handler as _handler\n\nlogger = get_logger(\"receipts.glue\")\n\ndef handler(event, context):\n    log_entry(logger, event, context)\n    try:\n        response = _handler(event, context)\n        log_exit(logger, response)\n        return response\n    except Exception as e:\n        log_error(logger, e)\n        return {\"ok\": False, \"error\": str(e)}\n"
+      },
+      {
+        "path": "src/ingestor/glue.py",
+        "content": "# src/ingestor/glue.py\nimport sys\nimport os\nsys.path.insert(0, os.path.join(os.path.dirname(__file__), \"..\"))\n\nfrom common.logger import get_logger, log_entry, log_exit, log_error\nfrom ingestor.process_csv import handler as _handler\n\nlogger = get_logger(\"ingestor.glue\")\n\ndef handler(event, context):\n    log_entry(logger, event, context)\n    try:\n        response = _handler(event, context)\n        log_exit(logger, response)\n        return response\n    except Exception as e:\n        log_error(logger, e)\n        return {\"ok\": False, \"error\": str(e)}\n"
+      },
+      {
+        "path": "src/ops/glue.py",
+        "content": "# src/ops/glue.py\nimport sys\nimport os\nsys.path.insert(0, os.path.join(os.path.dirname(__file__), \"..\"))\n\nfrom common.logger import get_logger, log_entry, log_exit, log_error\nfrom ops.health import handler as _handler\n\nlogger = get_logger(\"ops.glue\")\n\ndef handler(event, context):\n    log_entry(logger, event, context)\n    try:\n        response = _handler(event, context)\n        log_exit(logger, response)\n        return response\n    except Exception as e:\n        log_error(logger, e)\n        return {\"statusCode\": 500, \"body\": '{\"error\":\"Internal server error\"}'}\n"
+      }
+    ]
+  },
+  "infra": {
+    "terraform": {
+      "files": [
+        {
+          "path": "infra/terraform/providers.tf",
+          "content": "# infra/terraform/providers.tf\nterraform {\n  required_version = \">= 1.7.0\"\n  required_providers {\n    aws = {\n      source  = \"hashicorp/aws\"\n      version = \">= 5.0\"\n    }\n  }\n  # Backend configuration injected via CI -backend-config flags\n  backend \"s3\" {}\n}\n\nprovider \"aws\" {\n  region = var.region\n  default_tags {\n    tags = merge(\n      var.tags,\n      {\n        Project     = var.project\n        Environment = var.env\n        ManagedBy   = \"Terraform\"\n      }\n    )\n  }\n}\n"
+        },
+        {
+          "path": "infra/terraform/variables.tf",
+          "content": "# infra/terraform/variables.tf\nvariable \"project\" {\n  type        = string\n  description = \"Project name for resource naming\"\n}\n\nvariable \"env\" {\n  type        = string\n  description = \"Environment (staging, prod)\"\n}\n\nvariable \"region\" {\n  type        = string\n  description = \"AWS region\"\n  default     = \"us-east-1\"\n}\n\nvariable \"tags\" {\n  type        = map(string)\n  description = \"Additional tags for all resources\"\n  default     = {}\n}\n\nvariable \"build_sha\" {\n  type        = string\n  description = \"Git commit SHA for deployment tracking\"\n  default     = \"dev\"\n}\n\nlocals {\n  name_prefix = \"${var.project}-${var.env}\"\n}\n"
+        },
+        {
+          "path": "infra/terraform/api.tf",
+          "content": "# infra/terraform/api.tf\n# HTTP API Gateway v2 with routes to Orders and Health endpoints\n\nresource \"aws_apigatewayv2_api\" \"http_api\" {\n  name          = \"${local.name_prefix}-api\"\n  protocol_type = \"HTTP\"\n\n  cors_configuration {\n    allow_headers = [\"*\"]\n    allow_methods = [\"*\"]\n    allow_origins = [\"*\"]\n  }\n}\n\nresource \"aws_apigatewayv2_stage\" \"default\" {\n  api_id      = aws_apigatewayv2_api.http_api.id\n  name        = \"$default\"\n  auto_deploy = true\n\n  access_log_settings {\n    destination_arn = aws_cloudwatch_log_group.api_logs.arn\n    format = jsonencode({\n      requestId      = \"$context.requestId\"\n      ip             = \"$context.identity.sourceIp\"\n      requestTime    = \"$context.requestTime\"\n      httpMethod     = \"$context.httpMethod\"\n      routeKey       = \"$context.routeKey\"\n      status         = \"$context.status\"\n      protocol       = \"$context.protocol\"\n      responseLength = \"$context.responseLength\"\n    })\n  }\n}\n\nresource \"aws_cloudwatch_log_group\" \"api_logs\" {\n  name              = \"/aws/apigateway/${local.name_prefix}-api\"\n  retention_in_days = 7\n}\n\n# Orders routes\nresource \"aws_apigatewayv2_integration\" \"create_order\" {\n  api_id                 = aws_apigatewayv2_api.http_api.id\n  integration_type       = \"AWS_PROXY\"\n  integration_method     = \"POST\"\n  integration_uri        = aws_lambda_function.create_order.invoke_arn\n  payload_format_version = \"2.0\"\n}\n\nresource \"aws_apigatewayv2_route\" \"create_order\" {\n  api_id    = aws_apigatewayv2_api.http_
