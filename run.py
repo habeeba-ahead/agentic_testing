@@ -20,6 +20,7 @@ OUTPUT_TYPES = {
 ROOT = pathlib.Path(__file__).resolve().parent
 PROMPTS = (ROOT / "prompts").glob("*.txt")
 SCHEMA = (ROOT / "schema.xml").read_text(encoding="utf-8")
+MONOLITH_URL = "https://github.com/jszlenk/Monolith-Training.git"
 
 GUARD = (ROOT / "data" / "guardrails.md").read_text(encoding="utf-8")
 
@@ -53,7 +54,8 @@ def fill_template(t: str) -> str:
     BRD = (OUT_DIR / "A_BRD_creation.json").read_text(encoding="utf-8")
     return t.replace("{SCHEMA}", SCHEMA)\
             .replace("{BRD_TEXT}", BRD)\
-            .replace("{GUARDRAILS_TEXT}", GUARD)
+            .replace("{GUARDRAILS_TEXT}", GUARD)\
+            .replace("{MONOLITH_URL}", MONOLITH_URL)
 
 print(f"Running prompts... outputs -> {OUT_DIR}\n")
 print("prompt | valid_xml | bytes | secs | note | file")

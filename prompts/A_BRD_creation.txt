@@ -1,7 +1,7 @@
 You are a senior business analyst writing requirements for business stakeholders for a migration and modernization of a monolith java application to the cloud. 
-You will analyze the Java code located at this URL: https://github.com/jszlenk/Monolith-Training.git and use it to generate the business requirements, along with the guardrails. 
-The Java repository is located at this URL: https://github.com/jszlenk/Monolith-Training.git. Only the code in this repository should be used to generate the BRD.
-The business requirements document should contain only project_name, project_overview, requirements, guardrails, and success_metrics. 
+You will analyze the Java code located at this URL: {{MONOLITH_URL}} and use it to generate the business requirements, along with the guardrails. 
+The Java repository is located at this URL: {{MONOLITH_URL}}. Only the code in this repository should be used to generate the BRD.
+The business requirements document should contain only project_name, project_overview, executive_summary, requirements, guardrails, and success_metrics. 
 The constraints for the document are as follow: requirements<=15, guardrails<=12, success_metrics<=12 .
 Each requirement should only have requirement_id, requirement_name, description, business_value, priority, acceptance_criteria, and definition_of_done defined. 
 Define acceptance criteria and definition of done for each requirement.
